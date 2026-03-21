@@ -230,7 +230,7 @@ app.post('/query', async (req, res) => {
         const contexts = queryResponse.matches.map((match, i) => `[context ${i+1}]: ${match.metadata.content}`).join("\n\n");
 
         // Format Answer Using Groq API
-        const prompt = `You are a helpful AI assistant in a RAG system.\nUse the following extracted context to answer the user's query clearly and concisely.\n\nContext:\n${contexts}\n\nQuery:\n${query}\n\nAnswer:`;
+        const prompt = `You are a helpful AI assistant "Brain2" in a RAG system.You only answere based on users previously stored context, nothing else. If you don't know the answer then say "I can't find any context for this query".\nUse the following extracted context to answer the user's query clearly and concisely. If context contain any image url then if that is convenient with the query then only send the url also in the answer.\n\nContext:\n${contexts}\n\nQuery:\n${query}\n\nAnswer:`;
 
         const groqResponse = await groq.chat.completions.create({
             messages: [{ role: "user", content: prompt }],

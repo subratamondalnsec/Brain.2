@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Bot, Mic, MicOff, X, ChevronDown, MoreHorizontal, Settings, FileText, Share, RefreshCcw, MessageSquare, Send } from "lucide-react";
+import { queryEntry } from "../../api/chat";
 
 function AskChat() {
     const [isListening, setIsListening] = useState(true);
@@ -8,21 +9,82 @@ function AskChat() {
     const [showTranscript, setShowTranscript] = useState(false);
     const [inputValue, setInputValue] = useState("");
     const [messages, setMessages] = useState([
-        { id: 1, sender: "user", text: "Hey, can you help me prepare for my upcoming interview for a frontend role?" },
-        { id: 2, sender: "bot", text: "Absolutely! We can do a mock interview right now. Do you want to focus on React, generic web concepts, or algorithms?" }
+        { id: 1, sender: "user", text: "Hi are you sure you can answer my questions? I have send you about many days agow" },
+        { id: 2, sender: "bot", text: "I'd be glad to dig into your archives! Scanning your memory nodes from roughly 90 days ago now..." }
     ]);
 
-    const handleSendMessage = () => {
+    const handleSendMessage = async () => {
         if (!inputValue.trim()) return;
         
-        const newUserMsg = { id: Date.now(), sender: "user", text: inputValue.trim() };
+        const tempText = inputValue.trim();
+        const newUserMsg = { id: Date.now(), sender: "user", text: tempText };
         setMessages(prev => [...prev, newUserMsg]);
         setInputValue("");
         
-        // Simulate bot response
-        setTimeout(() => {
-            setMessages(prev => [...prev, { id: Date.now() + 1, sender: "bot", text: "Processing your input..." }]);
-        }, 1200);
+        // Setup empty loading response
+        const loadingId = Date.now() + 1;
+        setMessages(prev => [...prev, { id: loadingId, sender: "bot", text: "Processing your input..." }]);
+
+        // Fire request to the query api
+        try {
+            const result = await queryEntry(tempText);
+            setMessages(prev => prev.map(msg => 
+                msg.id === loadingId ? { ...msg, text: result.response || "Sorry, I couldn't compute a clear answer from your memories." } : msg
+            ));
+        } catch (error) {
+            console.error("Query API Error: ", error);
+            setMessages(prev => prev.map(msg => 
+                msg.id === loadingId ? { ...msg, text: "Error connecting to the analytical engine." } : msg
+            ));
+        }
+    };
+
+    const renderMessage = (text) => {
+        if (!text) return null;
+        
+        const formatText = (textChunk) => {
+            // Standardize literal slash-n strings
+            let processedText = textChunk.replace(/\\n|\/n/g, '\n');
+            // Split out bold sections
+            const boldParts = processedText.split(/\*\*(.*?)\*\*/g);
+            return boldParts.map((part, idx) => {
+                if (idx % 2 === 1) {
+                    return <strong key={idx} className="font-semibold text-white tracking-wide">{part}</strong>;
+                }
+                return part;
+            });
+        };
+
+        const regex = /\[(.*?)\]\((https?:\/\/[^\s\)]+)\)/g;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                parts.push(<span key={`text-${lastIndex}`}>{formatText(text.slice(lastIndex, match.index))}</span>);
+            }
+            const caption = match[1];
+            const url = match[2];
+            parts.push(
+                <div key={`img-${match.index}`} className="my-3 flex flex-col items-start gap-1.5 w-full">
+                    <img 
+                        src={url} 
+                        alt={caption} 
+                        className="max-w-[240px] md:max-w-xs w-full rounded-xl border border-[#348fc0]/30 shadow-[0_4px_15px_rgba(0,0,0,0.2)] object-cover bg-black/40 cursor-pointer hover:border-[#348fc0]/60 transition-colors" 
+                        onClick={() => window.open(url, '_blank')}
+                    />
+                    {caption && <span className="text-[11px] text-[#348fc0]/80 italic max-w-[240px]">{caption}</span>}
+                </div>
+            );
+            lastIndex = regex.lastIndex;
+        }
+
+        if (lastIndex < text.length) {
+            parts.push(<span key={`text-${lastIndex}`}>{formatText(text.slice(lastIndex))}</span>);
+        }
+
+        return parts.length > 0 ? parts : formatText(text);
     };
 
     return (
@@ -43,8 +105,8 @@ function AskChat() {
                     ) : (
                         <div key={msg.id} className="flex flex-col gap-1.5 w-[90%] self-start items-start animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both" style={{ animationDelay: `${Math.min(index * 100, 500)}ms` }}>
                             <span className="text-[#348fc0] text-[11px] font-medium pl-3">Second Brain</span>
-                            <div className="backdrop-blur-md bg-[#348fc0]/10 border border-[#348fc0]/20 rounded-2xl rounded-tl-sm px-4 py-3 text-white/90 text-sm leading-relaxed">
-                                {msg.text}
+                            <div className="backdrop-blur-md bg-[#348fc0]/10 border border-[#348fc0]/20 rounded-2xl rounded-tl-sm px-4 py-3 text-white/90 text-sm leading-relaxed whitespace-pre-wrap">
+                                {renderMessage(msg.text)}
                             </div>
                         </div>
                     )

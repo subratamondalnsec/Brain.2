@@ -27,3 +27,8 @@ export const getChatByDate = async (date) => {
   const response = await api.get(`/chat/${date}`);
   return response.data;
 };
+
+export const queryEntry = async (query) => {
+  const response = await api.post('/query', { query });
+  return response.data;
+};

@@ -1,4 +1,6 @@
-// QUERY MODE — No DB storage. Logs query to console. RAG system coming soon.
+const axios = require("axios");
+
+// QUERY MODE — No DB storage. Forward query to RAG system.
 
 const sendQuery = async (req, res) => {
   try {
@@ -9,23 +11,30 @@ const sendQuery = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Query text is required" });
     }
+    try {
+      const ragUrl = process.env.RAG_URL;
+      
+      const response = await axios.post(`${ragUrl}/query`, {
+        user_id: req.user._id,
+        query: query.trim()
+      });
 
-    // Intentional console log — RAG integration placeholder
-    console.log("─────────────────────────────────");
-    console.log("🔍 QUERY RECEIVED");
-    console.log(`👤 User     : ${req.user.email}`);
-    console.log(`📅 Time     : ${new Date().toISOString()}`);
-    console.log(`💬 Query    : ${query.trim()}`);
-    console.log("─────────────────────────────────");
-
-    return res.status(200).json({
-      success: true,
-      message: "Query received. RAG system coming soon.",
-      query: query.trim(),
-      response:
-        "This feature is under construction. Your query has been logged.",
-      timestamp: new Date().toISOString(),
-    });
+      return res.status(200).json({
+        success: true,
+        message: "Query processed successfully",
+        query: query.trim(),
+        response: response.data.answer,
+        matchedDocumentsCount: response.data.matchedDocumentsCount,
+        timestamp: new Date().toISOString()
+      });
+    } catch (ragError) {
+      console.error("Error connecting to RAG server:", ragError.message);
+      return res.status(502).json({
+        success: false,
+        message: "Failed to connect to RAG server to process query",
+        error: ragError.response?.data?.error || ragError.message
+      });
+    }
   } catch (error) {
     console.error("sendQuery error:", error);
     return res.status(500).json({
