@@ -40,51 +40,87 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-[#020617]">
-      {/* Dynamic Background Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse-slow" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/20 blur-[120px] rounded-full animate-pulse-slow" style={{ animationDelay: '2s' }} />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 max-w-6xl w-full glass-morphism rounded-[2.5rem] overflow-hidden relative z-10 border border-white/10 shadow-2xl">
+    <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center p-6 bg-[#000000]">
+      {/* Background Video (Matching hero.tsx) */}
+      <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          poster="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda_poster.jpg"
+          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
+      >
+          <source
+              src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4"
+              type="video/mp4"
+          />
+      </video>
+
+      {/* Overlay to ensure text readability */}
+      <div className="absolute inset-0 bg-black/60 z-10 pointer-events-none backdrop-blur-[2px]" />
+      <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.8)] z-10" />
+
+      {/* Main Glass Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 max-w-6xl w-full bg-[rgba(10,12,16,0.5)] backdrop-blur-2xl rounded-2xl overflow-hidden relative z-20 border border-[rgba(170,202,255,0.1)] shadow-[0_8px_32px_0_rgba(0,0,0,0.6)]">
         
         {/* Left Side: Branding */}
-        <div className="hidden lg:flex flex-col items-center justify-center p-16 relative bg-gradient-to-br from-blue-600/10 to-purple-600/10 border-r border-white/5">
+        <div className="hidden lg:flex flex-col items-center justify-center p-16 relative border-r border-[rgba(170,202,255,0.05)] bg-linear-to-br from-[#348fc0]/5 to-transparent">
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="text-center relative"
+            className="text-center relative flex flex-col items-center"
           >
-            <div className="w-24 h-24 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center mx-auto mb-10 shadow-2xl backdrop-blur-sm animate-float">
-              <Brain className="w-12 h-12 text-blue-500 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+            {/* Badge */}
+            <div className="flex items-center gap-2 rounded-[20px] bg-[rgba(43,55,80,0.2)] px-4 py-1.5 backdrop-blur-lg shadow-[inset_0_0_0_1px_rgba(170,202,255,0.2)] mb-10">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#348fc0d1] shadow-[0_0_6px_rgba(160,217,248,0.6)] animate-pulse" />
+                <span className="text-[12px] font-medium tracking-widest text-white/70">
+                    NETWORK SECURED
+                </span>
             </div>
-            <h1 className="text-6xl font-black mb-6 tracking-tighter bg-gradient-to-r from-white via-blue-200 to-blue-400 bg-clip-text text-transparent">
-              2ndBrain
+
+            <h1
+                className="text-6xl font-medium leading-[1.1] tracking-tight text-transparent select-none mb-6"
+                style={{
+                    backgroundImage: "linear-gradient(144.5deg, #FFFFFF 28%, rgba(0, 0, 0, 0) 115%)",
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                }}
+            >
+                <span className="font-medium" style={{
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    WebkitTextStroke: "1px #348fc0d1",
+                    backgroundClip: "text",
+                    color: "transparent"
+                }}>Brain.2</span>
             </h1>
-            <p className="text-xl text-slate-400 font-medium max-w-xs mx-auto leading-relaxed">
-              Your intelligence, <span className="text-blue-400">augmented</span>. The next evolution of personal knowledge.
+            
+            <p className="text-[15px] text-white/50 font-medium max-w-xs mx-auto leading-relaxed">
+              Your intelligence, <span className="text-[#348fc0]">augmented</span>. The next evolution of personal knowledge.
             </p>
             
-            <div className="mt-12 flex items-center justify-center gap-8 opacity-40">
+            <div className="mt-16 flex items-center justify-center gap-8 opacity-40">
               <div className="flex flex-col items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Secure</span>
+                <div className="w-1.5 h-1.5 bg-[#348fc0] rounded-full animate-pulse" />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#348fc0]">Secure</span>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Neural</span>
+                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/80">Neural</span>
               </div>
               <div className="flex flex-col items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Global</span>
+                <div className="w-1.5 h-1.5 bg-[#348fc0] rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#348fc0]">Global</span>
               </div>
             </div>
           </motion.div>
         </div>
 
         {/* Right Side: Form */}
-        <div className="p-8 lg:p-16 flex flex-col justify-center relative">
-          <div className="max-w-md w-full mx-auto">
+        <div className="p-8 lg:p-16 flex flex-col justify-center relative bg-[rgba(5,7,10,0.6)]">
+          <div className="max-w-md w-full mx-auto relative z-10">
             <div className="mb-10">
               <motion.div 
                 key={isLogin ? 'login-head' : 'signup-head'}
@@ -92,12 +128,12 @@ const Auth = () => {
                 animate={{ opacity: 1, x: 0 }}
                 className="flex items-center gap-4 mb-3"
               >
-                <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 text-blue-500">
-                  {isLogin ? <LogIn size={20} /> : <UserPlus size={20} />}
+                <div className="p-2 bg-white/5 rounded-lg border border-[rgba(170,202,255,0.1)] text-[#348fc0] shadow-inner flex items-center justify-center shrink-0 w-11 h-11">
+                  {isLogin ? <LogIn size={18} /> : <Brain size={18} />}
                 </div>
-                <h2 className="text-3xl font-extrabold tracking-tight text-white">{isLogin ? 'Sign In' : 'Join Neural'}</h2>
+                <h2 className="text-3xl font-medium tracking-tight text-white/90">{isLogin ? 'Sign In' : 'Get Brain.2'}</h2>
               </motion.div>
-              <p className="text-slate-400 font-medium">
+              <p className="text-white/40 text-[15px]">
                 {isLogin ? 'Return to your digital consciousness.' : 'Start building your decentralized neural network today.'}
               </p>
             </div>
@@ -111,9 +147,9 @@ const Auth = () => {
                     exit={{ opacity: 0, height: 0, y: -10 }}
                     className="space-y-2 overflow-hidden"
                   >
-                    <label className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Full Identity</label>
+                    <label className="text-[14px] tracking-tight text-white/50 ml-1">Your Name</label>
                     <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-[#348fc0] transition-colors">
                         <User size={18} />
                       </div>
                       <input 
@@ -122,8 +158,8 @@ const Auth = () => {
                         onChange={handleInputChange}
                         required={!isLogin}
                         type="text" 
-                        placeholder="Human Name"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium"
+                        placeholder="Full Name"
+                        className="w-full bg-[#030508] border border-[rgba(170,202,255,0.25)] rounded-xl py-3 pl-12 pr-4 text-white/90 placeholder:text-white/30 outline-none focus:border-[#348fc0]/50 transition-all shadow-inner"
                       />
                     </div>
                   </motion.div>
@@ -131,9 +167,9 @@ const Auth = () => {
               </AnimatePresence>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Neural Address</label>
+                <label className="text-[14px] tracking-tight text-white/50 ml-1">Email Address</label>
                 <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-[#348fc0] transition-colors">
                     <Mail size={18} />
                   </div>
                   <input 
@@ -143,15 +179,15 @@ const Auth = () => {
                     required
                     type="email" 
                     placeholder="email@consciousness.io"
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium"
+                    className="w-full bg-[#030508] border border-[rgba(170,202,255,0.25)] rounded-xl py-3 pl-12 pr-4 text-white/90 placeholder:text-white/30 outline-none focus:border-[#348fc0]/50 transition-all shadow-inner"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Access Key</label>
+                <label className="text-[14px] tracking-tight text-white/50 ml-1">Access Key</label>
                 <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-[#348fc0] transition-colors">
                     <Lock size={18} />
                   </div>
                   <input 
@@ -161,7 +197,7 @@ const Auth = () => {
                     required
                     type="password" 
                     placeholder="••••••••"
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium"
+                    className="w-full bg-[#030508] border border-[rgba(170,202,255,0.25)] rounded-xl py-3 pl-12 pr-4 text-white/90 placeholder:text-white/30 outline-none focus:border-[#348fc0]/50 transition-all shadow-inner"
                   />
                 </div>
               </div>
@@ -170,24 +206,23 @@ const Auth = () => {
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-sm font-medium flex gap-3 items-center"
+                  className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm font-medium flex gap-3 items-center"
                 >
-                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shrink-0" />
                   {error}
                 </motion.div>
               )}
 
               <button 
                 disabled={loading}
-                className="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 active:scale-[0.98] disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-600 rounded-2xl font-bold text-white shadow-xl shadow-blue-500/20 transition-all flex items-center justify-center gap-3 group relative overflow-hidden"
+                className="w-full h-14 mt-2 bg-linear-to-r from-[#348fc0]/20 to-[#348fc0]/10 hover:from-[#348fc0]/30 hover:to-[#348fc0]/20 active:scale-[0.98] disabled:opacity-50 border border-[#348fc0]/30 rounded-xl text-[#348fc0] shadow-[0_0_15px_rgba(52,143,192,0.15)] hover:shadow-[0_0_25px_rgba(52,143,192,0.25)] transition-all flex items-center justify-center gap-3 group relative overflow-hidden"
               >
                 {loading ? (
-                  <Loader className="w-6 h-6 animate-spin" />
+                  <Loader className="w-5 h-5 animate-spin text-[#348fc0]" />
                 ) : (
                   <>
-                    <span className="relative z-10">{isLogin ? 'Establish Link' : 'Initialize Brain'}</span>
-                    <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] animate-[shine_3s_infinite]" />
+                    <span className="relative z-10 font-medium tracking-wide">{isLogin ? 'Sign In' : 'Sign Up'}</span>
+                    <ArrowRight className="w-4 h-4 relative z-10" />
                   </>
                 )}
               </button>
@@ -196,19 +231,13 @@ const Auth = () => {
             <div className="mt-10 flex flex-col items-center gap-6">
               <button 
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-sm font-bold text-slate-500 hover:text-white transition-colors flex items-center gap-2 group"
+                className="text-[13px] text-white/40 hover:text-white/60 transition-colors flex items-center gap-2 group"
               >
-                {isLogin ? "Need a neural network?" : "Already synchronized?"}
-                <span className="text-blue-500 group-hover:underline">
+                {isLogin ? "Need another Brain?" : "Already have an account?"}
+                <span className="text-[#348fc0] group-hover:underline">
                   {isLogin ? "Create One" : "Log In"}
                 </span>
               </button>
-              
-              <div className="w-full flex items-center gap-4">
-                <div className="h-px flex-1 bg-white/5" />
-                <span className="text-[10px] font-black tracking-[0.3em] uppercase text-slate-600">Secure Protocol v2</span>
-                <div className="h-px flex-1 bg-white/5" />
-              </div>
             </div>
           </div>
         </div>
