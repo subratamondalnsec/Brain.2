@@ -27,7 +27,7 @@ function SendChat({
         {/* Chat Body */}
         <div 
             ref={chatContainerRef}
-            className="flex-1 h-full min-h-0 overflow-y-auto px-4 lg:px-12 pt-4 pb-32 lg:pb-40 flex flex-col gap-4 relative z-10 w-full custom-scrollbar"
+            className="flex-1 h-full min-h-0 overflow-y-auto px-4 lg:px-12 pt-14 pb-32 lg:pb-40 flex flex-col gap-4 relative z-10 w-full custom-scrollbar"
         >
             <div className="w-full flex justify-center mb-2 mt-2">
                 <span className="px-3 py-1 rounded-full bg-white/5 backdrop-blur-sm text-white/40 text-[10px] uppercase tracking-wider font-semibold border border-white/5">Today</span>
@@ -102,22 +102,22 @@ function SendChat({
               if (item.type === 'image') {
                 return (
                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={item.id} className="flex justify-end w-full mt-1 relative z-10">
-                    <div className="max-w-[85%] md:max-w-[70%] rounded-2xl p-2 rounded-tr-sm bg-white/5 border border-white/10 backdrop-blur-md shadow-[0_5px_15px_rgba(0,0,0,0.2)]">
-                        <div className="w-full sm:w-64 h-48 rounded-xl bg-[#0a0c10]/50 border border-white/5 relative overflow-hidden flex items-center justify-center group cursor-zoom-in">
+                    <div className="max-w-[85%] md:max-w-[70%] rounded-2xl p-1.5 rounded-tr-sm bg-neutral-800/40 border border-white/10 backdrop-blur-md shadow-[0_5px_15px_rgba(0,0,0,0.2)]">
+                        <div className="w-full sm:w-64 h-48 rounded-xl bg-[#0a0c10]/50 border border-white/5 relative overflow-hidden flex items-center justify-center group cursor-pointer">
                             <img 
                                 src={item.url}
                                 alt="Attachment"
                                 onClick={() => setFullScreenImage(item.url)}
-                                className="w-full h-full object-cover opacity-80 mix-blend-luminosity hover:opacity-100 hover:mix-blend-normal hover:scale-105 transition-all duration-300"
+                                className="w-full h-full object-cover opacity-80 mix-blend-luminosity hover:opacity-90 hover:mix-blend-normal transition-all duration-300"
                             />
                             <div className="absolute inset-0 bg-linear-to-tr from-[#348fc0]/30 to-transparent mix-blend-overlay pointer-events-none" />
                         </div>
                         {item.content && (
-                            <div className="px-2 pt-3 pb-1">
-                                <span className="text-white/90 text-[15px] leading-relaxed wrap-break-word">{item.content}</span>
+                            <div className="px-2 pt-1 pb-1">
+                                <span className="text-white/70 text-[14px] leading-tight wrap-break-word">{item.content}</span>
                             </div>
                         )}
-                        <div className="flex justify-end pr-2 pt-2 opacity-70">
+                        <div className="flex justify-end pr-2 opacity-70">
                             <span className="text-[10px] text-[#348fc0] font-medium uppercase tracking-wider">
                                {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -135,16 +135,16 @@ function SendChat({
                  key={item.id} 
                  className={`flex w-full ${item.role === 'user' ? 'justify-end' : 'justify-start'} mt-1 relative z-10`}
                >
-                 <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-3.5 backdrop-blur-md shadow-[0_5px_15px_rgba(0,0,0,0.2)] flex flex-col gap-1.5 ${
+                 <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-3 py-2 backdrop-blur-md shadow-[0_5px_15px_rgba(0,0,0,0.2)] flex flex-col gap-1.5 ${
                     item.role === 'user' 
-                    ? 'rounded-tr-sm bg-white/5 border border-white/10' 
-                    : 'rounded-tl-sm bg-[#348fc0]/10 border border-[#348fc0]/30'
+                    ? 'rounded-tr-sm bg-[#348fc0]/40 border border-white/10' 
+                    : 'rounded-tl-sm bg-neutral-800/40 border border-[#348fc0]/30'
                  }`}>
-                     <span className="text-white/90 text-[15px] leading-relaxed">
+                     <span className="text-white/70 text-[14px] leading-tight">
                          {item.content || item.text}
                      </span>
-                     <div className={`flex opacity-70 mt-1 ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                         <span className="text-[10px] text-[#348fc0] font-medium uppercase tracking-wider">
+                     <div className={`flex opacity-70 ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                         <span className="text-[10px] text-[#348fc0] font-medium uppercase">
                             {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                          </span>
                      </div>
@@ -190,7 +190,7 @@ function SendChat({
                 </AnimatePresence>
 
                 <div className="flex w-full items-end gap-3">
-                    <div className="flex-1 min-h-[48px] bg-white/5 border border-white/10 transition-colors rounded-3xl flex items-center px-2 gap-2 backdrop-blur-md focus-within:border-[#348fc0]/50 focus-within:bg-white/10 shadow-[0_5px_15px_rgba(0,0,0,0.2)]">
+                    <div className="ui-glow-input flex-1 min-h-[48px] flex items-center px-2 gap-2 backdrop-blur-md">
                         
                         <div className="relative flex items-center justify-center p-2">
                             <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} className="outline-none">
@@ -241,19 +241,17 @@ function SendChat({
                     {message.trim() || stagedFile ? (
                         <button 
                             type="submit"
-                            className="w-12 h-12 rounded-full bg-[#348fc0] flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(52,143,192,0.5)] cursor-pointer hover:bg-[#3facdf] active:scale-95 transition-all text-[#030508]"
+                            className="ui-glow-circle w-12 h-12 rounded-full shrink-0"
                         >
-                            <Send className="w-5 h-5" />
+                            <Send className="w-[18px] h-[18px]" />
                         </button>
                 ) : (
                     <button 
                         type="button"
                         onClick={handleVoiceRecording}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-all ${
-                           isRecording ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] hover:bg-red-400 text-white' : 'bg-[#348fc0] shadow-[0_0_15px_rgba(52,143,192,0.5)] hover:bg-[#3facdf] text-[#030508]'
-                        }`}
+                        className={`ui-glow-circle w-12 h-12 rounded-full shrink-0 ${isRecording ? 'recording' : ''}`}
                     >
-                        {isRecording ? <Send className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                        {isRecording ? <Send className="w-[18px] h-[18px]" /> : <Mic className="w-[18px] h-[18px]" />}
                     </button>
                 )}
                 </div>
