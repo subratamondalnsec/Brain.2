@@ -4,6 +4,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Welcome from './pages/Welcome';
 import Auth from './pages/Auth';
 import SendAsk from './pages/SendAsk';
+import Schedules from './pages/Schedules';
+import Insights from './pages/Insights';
+import StorageHistory from './pages/StorageHistory';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -41,6 +44,33 @@ function App() {
             element={
               <ProtectedRoute>
                 <SendAsk />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/schedules" 
+            element={
+              <ProtectedRoute>
+                <Schedules />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/insights" 
+            element={
+              <ProtectedRoute>
+                <Insights />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/history" 
+            element={
+              <ProtectedRoute>
+                <StorageHistory />
               </ProtectedRoute>
             } 
           />

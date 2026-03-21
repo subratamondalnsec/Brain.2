@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, X, Plus, Terminal, Layers, Sparkles, Settings, LogOut, Home, Mic } from 'lucide-react';
+import { Brain, X, Plus, Calendar, Layers, Sparkles, Settings, LogOut, Home, Mic } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -53,7 +53,7 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
           <div className="px-4 py-3 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1 mt-2">Memory Clusters</div>
           {[
             { name: "Home", icon: Home, route: "/send-ask" },
-            { name: "Schedules", icon: Terminal, route: "/schedules" },
+            { name: "Schedules", icon: Calendar, route: "/schedules" },
             { name: "Insights", icon: Layers, route: "/insights" },
             { name: "Storage History", icon: Sparkles, route: "/history" }
           ].map((item, i) => {
