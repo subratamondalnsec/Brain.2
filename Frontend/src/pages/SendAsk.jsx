@@ -7,6 +7,7 @@ import { ImageModel } from '../components/Models/ImageModel';
 import ChatHeader from '../components/Common/ChatHeader';
 import SendChat from '../components/SendAsk/SendChat';
 import AskChat from '../components/SendAsk/AskChat';
+import { sendTextEntry, sendImageEntry } from '../api/chat';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -213,13 +214,40 @@ const Dashboard = () => {
     }
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!message.trim() && !stagedFile) return;
     
     if (stagedFile) {
+      if (stagedFile.type === 'document' || stagedFile.type === 'video') {
+          // Document/Video handling skipped for now
+          const userMsg = { 
+            id: Date.now(), 
+            role: 'user', 
+            type: stagedFile.type, 
+            url: stagedFile.url, 
+            name: stagedFile.name,
+            content: message.trim() || undefined
+          };
+          setChatHistory(prev => [...prev, userMsg]);
+          setStagedFile(null);
+          setMessage('');
+          
+          setTimeout(() => {
+            setChatHistory(prev => [...prev, { 
+              id: Date.now() + 1, 
+              role: 'assistant', 
+              type: 'text',
+              content: `File '${stagedFile.name}' processed.`
+            }]);
+          }, 1500);
+          return;
+      }
+
+      // Add optimistic message
+      const optimId = Date.now();
       const userMsg = { 
-        id: Date.now(), 
+        id: optimId, 
         role: 'user', 
         type: stagedFile.type, 
         url: stagedFile.url, 
@@ -227,34 +255,53 @@ const Dashboard = () => {
         content: message.trim() || undefined
       };
       setChatHistory(prev => [...prev, userMsg]);
+      const fileToSend = stagedFile.file;
+      const captionToSend = message.trim();
       setStagedFile(null);
       setMessage('');
-      
-      setTimeout(() => {
-        setChatHistory(prev => [...prev, { 
-          id: Date.now() + 1, 
-          role: 'assistant', 
-          type: 'text',
-          content: stagedFile.type === 'image'
-            ? "Image analyzed. Visual context successfully saved to your memory." 
-            : `Document '${stagedFile.name}' processed. Relevant information extracted to your neural core.`
-        }]);
-      }, 1500);
+
+      try {
+        const response = await sendImageEntry(fileToSend, captionToSend);
+        
+        // Add assistant response
+        setTimeout(() => {
+          setChatHistory(prev => [...prev, { 
+            id: Date.now() + 1, 
+            role: 'assistant', 
+            type: 'text',
+            content: "Image analyzed. Visual context successfully saved to your memory." 
+          }]);
+        }, 1500);
+      } catch (err) {
+        console.error("Failed to send image entry", err);
+        setChatHistory(prev => prev.filter(msg => msg.id !== optimId));
+        alert("Failed to send image.");
+      }
     } else {
+      // Optimistic Text Message
       const userMsg = { id: Date.now(), role: 'user', type: 'text', content: message };
       setChatHistory(prev => [...prev, userMsg]);
+      const textToSend = message;
       setMessage('');
       
-      setTimeout(() => {
-        setChatHistory(prev => [...prev, { 
-          id: Date.now() + 1, 
-          role: 'assistant', 
-          type: 'text',
-          content: mode === 'ask' 
-            ? "Brain analysis complete. I've identified 3 cross-connections in your neural archives related to this query." 
-            : "Context captured. Memory node encrypted and distributed across the neural network."
-        }]);
-      }, 1500);
+      try {
+        const response = await sendTextEntry(textToSend);
+
+        setTimeout(() => {
+          setChatHistory(prev => [...prev, { 
+            id: Date.now() + 1, 
+            role: 'assistant', 
+            type: 'text',
+            content: mode === 'ask' 
+              ? "Brain analysis complete. I've identified 3 cross-connections in your neural archives related to this query." 
+              : "Context captured. Memory node encrypted and distributed across the neural network."
+          }]);
+        }, 1500);
+      } catch (err) {
+        console.error("Failed to send text entry", err);
+        setChatHistory(prev => prev.filter(msg => msg.id !== userMsg.id));
+        alert("Failed to send message.");
+      }
     }
   };
 

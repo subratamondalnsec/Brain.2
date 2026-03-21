@@ -2,19 +2,69 @@ import React, { useState } from 'react';
 import { Menu, Filter, FolderArchive, ArrowUpRight, HardDrive, Database, Search, FileText, Image as ImageIcon, Video, Calendar } from 'lucide-react';
 import Sidebar from '../components/Common/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect } from 'react';
+import { getHistory, getChatByDate } from '../api/chat';
 
 const StorageHistory = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [availableDates, setAvailableDates] = useState([]);
+  const [files, setFiles] = useState([]);
 
-  const [files, setFiles] = useState([
-    { id: 1, title: 'Project_Apollo_Blueprint.pdf', size: '24.5 MB', type: 'pdf', date: todayStr },
-    { id: 2, title: 'Demo_Walkthrough.mp4', size: '1.2 GB', type: 'video', date: todayStr },
-    { id: 3, title: 'UX_Wireframes_V2.png', size: '8.4 MB', type: 'image', date: todayStr },
-    { id: 4, title: 'User_Research_Notes.pdf', size: '342 KB', type: 'pdf', date: todayStr },
-    { id: 5, title: 'Quarterly_Sync.mp4', size: '412.1 MB', type: 'video', date: todayStr },
-  ]);
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const data = await getHistory();
+        if (data && data.success && data.history.length > 0) {
+          setAvailableDates(data.history);
+          if (!data.history.includes(selectedDate)) {
+            setSelectedDate(data.history[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch history dates", err);
+      }
+    };
+    fetchHistory();
+  }, []);
+
+  useEffect(() => {
+    const fetchEntriesForDate = async () => {
+      try {
+        const data = await getChatByDate(selectedDate);
+        if (data && data.success && data.entries) {
+          const fetchedFiles = data.entries
+            .filter(entry => entry.type === 'img' || entry.type === 'document' || entry.type === 'video' || entry.type === 'audio')
+            .map((entry, index) => {
+               let uiType = 'database';
+               if (entry.type === 'img') uiType = 'image';
+               if (entry.type === 'document') uiType = 'pdf';
+               if (entry.type === 'audio' || entry.type === 'video') uiType = 'video';
+               
+               let title = entry.caption || 'Attachment';
+               if (entry.type === 'img') title = 'Image_' + (entry._id ? entry._id.slice(-4) : index) + '.png';
+               
+               return {
+                 id: entry._id || Date.now() + index,
+                 title,
+                 size: 'N/A', // Size not stored in backend
+                 type: uiType,
+                 date: selectedDate,
+                 url: entry.content
+               };
+            });
+          setFiles(fetchedFiles);
+        } else {
+          setFiles([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch entries for date", err);
+        setFiles([]);
+      }
+    };
+    if (selectedDate) fetchEntriesForDate();
+  }, [selectedDate]);
 
   const filteredFiles = files.filter(f => f.date === selectedDate);
 
