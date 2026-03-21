@@ -2,6 +2,7 @@ const fs = require("fs");
 const Chat = require("../models/Chat");
 const ChatRecord = require("../models/ChatRecord");
 const cloudinary = require("../config/cloudinary");
+const axios = require("axios");
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 const getTodayString = () => new Date().toISOString().split("T")[0];
@@ -37,6 +38,17 @@ const addTextEntry = async (req, res) => {
       { $set: { [`dates.${today}`]: chat._id } },
       { upsert: true, new: true }
     );
+
+    // Send data to RAG server
+    try {
+      await axios.post(`${process.env.RAG_URL}/upload-text`, {
+        user_id: req.user._id,
+        content: text.trim(),
+        date: today,
+      });
+    } catch (ragError) {
+      console.error("Failed to add text entry to RAG server:", ragError.message);
+    }
 
     const newEntry = chat.entries[chat.entries.length - 1];
 
@@ -78,10 +90,23 @@ const addImageEntry = async (req, res) => {
 
     const imageUrl = result.secure_url;
 
+    const imagewithcaption = "image url:" + imageUrl + "  " + "image caption:" + caption;
+
     // Find or create Chat for today
     let chat = await Chat.findOne({ userId: req.user._id, date: today });
     if (!chat) {
       chat = await Chat.create({ userId: req.user._id, date: today, entries: [] });
+    }
+
+    // Send data to RAG server
+    try {
+      await axios.post(`${process.env.RAG_URL}/upload-text`, {
+        user_id: req.user._id,
+        content: imagewithcaption,
+        date: today,
+      });
+    } catch (ragError) {
+      console.error("Failed to add imagewithcaption entry to RAG server:", ragError.message);
     }
 
     const nextOrder = chat.entries.length + 1;
