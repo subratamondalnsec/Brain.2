@@ -7,6 +7,7 @@ const authRoutes = require("./routes/auth.routes");
 const uploadRoutes = require("./routes/upload.routes");
 const chatRoutes = require("./routes/chat.routes");
 const queryRoutes = require("./routes/query.routes");
+const analyticsRoutes = require("./routes/analytics.routes");
 const cors = require("cors");
 
 const app = express();
@@ -27,6 +28,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/query", queryRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({

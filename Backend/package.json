@@ -15,6 +15,8 @@
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "express-fileupload": "^1.5.2",
+    "form-data": "^4.0.5",
+    "groq-sdk": "^1.1.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5"
   },
