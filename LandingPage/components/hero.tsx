@@ -1,7 +1,7 @@
 import Navbar from './common/navbar';
 import RightMockups from './Hero/rightMockups';
 import LeftMockups from './Hero/leftMockups';
-import AnimatedGenerateButton from './animated-generate-button-shadcn-tailwind';
+import AnimatedGenerateButton from '@/components/animated-generate-button-shadcn-tailwind';
 
 const hero = () => {
     return (
