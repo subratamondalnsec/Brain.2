@@ -1,0 +1,10 @@
+/* Reset styles if needed */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
