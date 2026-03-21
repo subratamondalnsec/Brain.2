@@ -26,11 +26,11 @@ const Auth = () => {
       if (isLogin) {
         const data = await loginUser({ email: formData.email, password: formData.password });
         login(data.user, data.token);
-        navigate('/dashboard');
+        navigate('/send-ask');
       } else {
         const data = await signupUser(formData);
         login(data.user, data.token);
-        navigate('/dashboard');
+        navigate('/send-ask');
       }
     } catch (err) {
       setError(err.message || 'Authentication failed. Please try again.');

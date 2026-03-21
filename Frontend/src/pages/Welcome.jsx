@@ -11,9 +11,9 @@ const Welcome = () => {
     if (!loading) {
       const timer = setTimeout(() => {
         if (user) {
-          navigate('/dashboard');
+          navigate('/send-ask', { replace: true });
         } else {
-          navigate('/auth');
+          navigate('/auth', { replace: true });
         }
       }, 5000); // 5 seconds of cinematic bliss
       return () => clearTimeout(timer);

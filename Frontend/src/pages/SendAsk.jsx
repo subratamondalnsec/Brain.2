@@ -1,8 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Menu, X, Send, Mic, Image as ImageIcon, Zap, HelpCircle, Paperclip, Play
-} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Common/Sidebar';
