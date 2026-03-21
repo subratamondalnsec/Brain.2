@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, X, Plus, Terminal, Layers, Sparkles, Settings, LogOut } from 'lucide-react';
+import { Brain, X, Plus, Terminal, Layers, Sparkles, Settings, LogOut, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 function Sidebar({ isSidebarOpen, setSidebarOpen }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -40,38 +41,43 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
                <div className="absolute inset-0 bg-[#348fc0]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div>
-              <h2 className="font-bold text-[19px] tracking-tight text-white mb-0.5">2ndBrain</h2>
-              <div className="text-[9px] uppercase font-bold text-[#348fc0] tracking-[0.3em] opacity-80">Workspace v2</div>
+              <h2 className="text-[24px] tracking-tight text-white">Brain.2</h2>
+              <div className="text-xs text-[#348fc0] opacity-80">by NIXGN</div>
             </div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all">
-            <X size={18} className="text-white/70" />
-          </button>
-        </div>
-
-        {/* Action Button */}
-        <div className="px-6 mb-7 mt-2">
-          <button className="w-full flex items-center justify-center gap-2.5 bg-transparent border border-[#348fc0]/30 hover:border-[#348fc0]/70 hover:bg-[#348fc0]/10 hover:shadow-[0_0_20px_rgba(52,143,192,0.15)] p-3.5 rounded-2xl font-semibold text-[#3facdf] active:scale-[0.98] transition-all duration-300 group overflow-hidden relative">
-            <Plus size={18} className="group-hover:rotate-90 transition-transform duration-500" />
-            New Neural Thread
-          </button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-4 space-y-1 custom-scrollbar">
           <div className="px-4 py-3 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1 mt-2">Memory Clusters</div>
           {[
-            { name: "Project Architecture", icon: Terminal },
-            { name: "Global Marketing", icon: Layers },
-            { name: "Neural Vision 2026", icon: Sparkles }
-          ].map((item, i) => (
-            <button key={i} className="w-full flex items-center gap-3.5 p-3 rounded-2xl hover:bg-white/3 border border-transparent hover:border-white/5 text-white/50 hover:text-white transition-all duration-300 group">
-              <div className="p-2.5 rounded-xl bg-white/5 group-hover:bg-[#348fc0]/15 group-hover:text-[#348fc0] transition-colors duration-300 shadow-sm">
-                <item.icon size={16} className="text-inherit" />
-              </div>
-              <span className="truncate text-[13px] font-medium tracking-wide">{item.name}</span>
-            </button>
-          ))}
+            { name: "Home", icon: Home, route: "/send-ask" },
+            { name: "Schedules", icon: Terminal, route: "/schedules" },
+            { name: "Insights", icon: Layers, route: "/insights" },
+            { name: "Storage History", icon: Sparkles, route: "/history" }
+          ].map((item, i) => {
+            const isActive = location.pathname.startsWith(item.route);
+            return (
+              <button 
+                key={i} 
+                onClick={() => { navigate(item.route); setSidebarOpen(false); }} 
+                className={`w-full flex items-center gap-3.5 p-3 rounded-xl transition-all duration-300 group border ${
+                  isActive 
+                    ? 'bg-[#348fc0]/10 border-[#348fc0]/30 text-white shadow-[0_0_20px_rgba(52,143,192,0.1)]' 
+                    : 'bg-transparent border-transparent hover:bg-white/3 hover:border-white/5 text-white/50 hover:text-white'
+                }`}
+              >
+                <div className={`p-2.5 rounded-lg transition-colors duration-300 shadow-sm ${
+                  isActive 
+                    ? 'bg-[#348fc0]/20 text-[#348fc0]' 
+                    : 'bg-white/5 group-hover:bg-[#348fc0]/15 group-hover:text-[#348fc0]'
+                }`}>
+                  <item.icon size={16} className="text-inherit" />
+                </div>
+                <span className="truncate text-[13px] font-medium tracking-wide">{item.name}</span>
+              </button>
+            );
+          })}
         </nav>
 
         {/* Footer Profile */}
@@ -81,19 +87,13 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
                <div className="w-11 h-11 rounded-2xl bg-[#348fc0]/10 border border-[#348fc0]/20 flex items-center justify-center text-[#348fc0] font-bold text-base shadow-[0_0_15px_rgba(52,143,192,0.15)]">
                  {user?.fullName?.charAt(0).toUpperCase() || 'U'}
                </div>
-               <div className="overflow-hidden flex-1">
+               <div className="overflow-hidden flex items-center justify-between">
                  <p className="font-semibold text-white/90 text-[13px] tracking-wide truncate">{user?.fullName || 'User Context'}</p>
-                 <div className="flex items-center gap-1.5 mt-0.5">
-                   <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(52,211,146,0.5)]" />
-                   <p className="text-[9px] font-bold text-emerald-400/80 uppercase tracking-wider">Active Link</p>
-                 </div>
+
+
+                 
+                 <button onClick={handleLogout} title="Disconnect" className="p-2.5 text-white/40 hover:text-red-400 hover:bg-red-500/15 transition-colors rounded-xl"><LogOut size={16} /></button>
                </div>
-             </div>
-             
-             <div className="flex items-center justify-between mt-5 pt-5 border-t border-white/5 relative z-10">
-                <button title="Settings" className="p-2.5 text-white/40 hover:text-white hover:bg-white/10 transition-colors rounded-xl"><Settings size={16} /></button>
-                <button title="Nodes" className="p-2.5 text-white/40 hover:text-[#348fc0] hover:bg-[#348fc0]/15 transition-colors rounded-xl"><Layers size={16} /></button>
-                <button onClick={handleLogout} title="Disconnect" className="p-2.5 text-white/40 hover:text-red-400 hover:bg-red-500/15 transition-colors rounded-xl"><LogOut size={16} /></button>
              </div>
           </div>
         </div>
