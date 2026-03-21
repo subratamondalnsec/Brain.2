@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Welcome from './pages/Welcome';
 import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
+import SendAsk from './pages/SendAsk';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -37,10 +37,10 @@ function App() {
 
           {/* Main Dashboard - Protected */}
           <Route 
-            path="/dashboard" 
+            path="/send-ask" 
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <SendAsk />
               </ProtectedRoute>
             } 
           />
