@@ -1,19 +1,94 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, X, Plus, Calendar, Layers, Sparkles, Settings, LogOut, Home, Mic } from 'lucide-react';
+import { Brain, X, Plus, Calendar, Layers, Sparkles, Settings, LogOut, Home, Mic, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { processAudio } from '../../api/analytics';
 
 function Sidebar({ isSidebarOpen, setSidebarOpen }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isListening, setIsListening] = useState(false);
+  
+  // Ambient Queue State
+  const [ambientQueue, setAmbientQueue] = useState([]);
+  const mediaRecorderRef = useRef(null);
 
   const handleLogout = () => {
     logout();
     navigate('/auth');
   };
+
+  // 1. Media Recorder hook
+  useEffect(() => {
+    if (isListening) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        const recorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = recorder;
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            const ext = recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+            const file = new File([e.data], `ambient_${Date.now()}.${ext}`, { type: recorder.mimeType || 'audio/webm' });
+            setAmbientQueue(q => [...q, { id: Date.now(), file, status: 'queued' }]);
+          }
+        };
+        // Slice chunks every 1 minute for faster feedback
+        recorder.start(60 * 1000);
+      }).catch(err => {
+        console.error("Microphone access denied or failed", err);
+        setIsListening(false);
+      });
+    } else {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+    }
+    
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isListening]);
+
+  // 2. Queue Processor Loop
+  useEffect(() => {
+    const processNext = async () => {
+      // Don't pop new items if we are already bottlenecked
+      if (ambientQueue.some(item => item.status === 'processing')) return;
+      
+      const nextItem = ambientQueue.find(item => item.status === 'queued');
+      if (!nextItem) return;
+      if (!navigator.onLine) return; // wait for connectivity
+
+      setAmbientQueue(q => q.map(item => item.id === nextItem.id ? { ...item, status: 'processing' } : item));
+
+      try {
+        const formData = new FormData();
+        formData.append('audio', nextItem.file);
+        
+        // Pass strictly formatted ISO 8601 device date bounding memory processing rigidly
+        formData.append('date', new Date().toISOString().split('T')[0]);
+
+        await processAudio(formData);
+        
+        // Remove successfully processed array
+        setAmbientQueue(q => q.filter(item => item.id !== nextItem.id));
+      } catch (err) {
+        console.error("Queue process error:", err);
+        // Drop back to queued status for retry
+        setAmbientQueue(q => q.map(item => item.id === nextItem.id ? { ...item, status: 'queued' } : item));
+      }
+    };
+
+    const interval = setInterval(processNext, 10000);
+    processNext(); // rapid check
+    
+    return () => clearInterval(interval);
+  }, [ambientQueue]);
 
   return (
     <>
@@ -80,7 +155,7 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
         </nav>
 
         {/* Ambient Listening Toggle */}
-        <div className="px-5 mb-2">
+        <div className="px-5 mb-2 flex flex-col gap-2">
           <div className="bg-[#0a0c10] border border-white/5 rounded-2xl p-4 flex justify-between items-center group transition-all duration-300 hover:border-white/10 shadow-lg relative overflow-hidden">
             <div className="flex items-center gap-3 relative z-10">
               <div className={`p-2 rounded-xl transition-colors duration-300 ${isListening ? 'bg-[#348fc0]/20 text-[#348fc0] shadow-[0_0_15px_rgba(52,143,192,0.15)]' : 'bg-white/5 text-white/40'}`}>
@@ -88,7 +163,7 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
               </div>
               <div>
                 <h3 className="text-[13px] font-medium text-white/90 tracking-wide">Ambient AI</h3>
-                <p className="text-[10px] text-white/40 mt-0.5">Always-on listening</p>
+                <p className="text-[10px] text-white/40 mt-0.5">Always-on background sync</p>
               </div>
             </div>
 
@@ -104,6 +179,34 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
             </button>
             {isListening && <div className="absolute inset-0 bg-[#348fc0]/5 z-0" />}
           </div>
+          
+          {/* Active Queue Pipeline render */}
+          <AnimatePresence>
+            {ambientQueue.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }} 
+                animate={{ opacity: 1, height: 'auto' }} 
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-black/40 border border-[#348fc0]/20 shadow-[0_4px_15px_rgba(0,0,0,0.3)] rounded-xl p-3 flex flex-col gap-2 overflow-hidden"
+              >
+                <div className="text-[10px] uppercase text-[#348fc0] font-bold tracking-wider flex items-center justify-between">
+                  <span>Processing Queue</span>
+                  <span className="bg-[#348fc0]/20 px-1.5 py-0.5 rounded-md">{ambientQueue.length}</span>
+                </div>
+                <div className="flex flex-col gap-2 max-h-32 overflow-y-auto custom-scrollbar pr-1">
+                  {ambientQueue.map(item => (
+                    <div key={item.id} className="flex justify-between items-center bg-white/5 rounded-lg p-2 border border-white/5">
+                      <span className="text-[11px] text-white/70 truncate w-[60%] font-mono">{item.file.name}</span>
+                      <span className={`text-[10px] font-medium flex items-center gap-1 ${item.status === 'processing' ? 'text-amber-400' : 'text-blue-300'}`}>
+                        {item.status === 'processing' && <Loader2 size={10} className="animate-spin" />}
+                        {item.status === 'processing' ? 'Processing...' : 'Queued'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Footer Profile */}

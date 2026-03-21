@@ -1,51 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, Filter, Sparkles, Target, Zap, Network, Calendar } from 'lucide-react';
 import Sidebar from '../components/Common/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getAnalytics } from '../api/analytics';
 
 const Insights = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
-  const [insights, setInsights] = useState([
-    {
-      id: 1,
-      date: todayStr,
-      type: 'decision',
-      icon: Target,
-      title: 'Finalized Authentication Architecture',
-      content: 'Decided to move forward with a unified JWT-based approach for the frontend service to simplify the secure handover of tokens between the landing platform and user dashboard.',
-      tags: ['ARCHITECTURE', 'SECURITY']
-    },
-    {
-      id: 2,
-      date: todayStr,
-      type: 'discovery',
-      icon: Sparkles,
-      title: 'Context Engine Optimization',
-      content: 'Identified a bottleneck in how the AI parses historical schedules. Vectorizing the daily logs before querying reduces latency by ~400ms.',
-      tags: ['PERFORMANCE', 'AI']
-    },
-    {
-      id: 3,
-      date: todayStr,
-      type: 'action',
-      icon: Zap,
-      title: 'UI/UX Standardization Needed',
-      content: 'The user prefers the dark blue `#348fc0` glassmorphic theme universally. Ongoing process to standardize the standalone pages to perfectly match this professional aesthetic.',
-      tags: ['DESIGN', 'TODO']
-    },
-    {
-      id: 4,
-      date: todayStr,
-      type: 'knowledge',
-      icon: Network,
-      title: 'Topic Clustering Active',
-      content: 'The system has successfully mapped the current session\'s discussion into 3 main neural clusters: Frontend UI Layouts, Routing Logic, and State Management.',
-      tags: ['SYSTEM', 'LOG']
-    }
-  ]);
+  const [insights, setInsights] = useState([]);
+
+  useEffect(() => {
+    const fetchInsights = async () => {
+      try {
+        const res = await getAnalytics(selectedDate);
+        if (res.success && res.analytics && res.analytics.length > 0) {
+          const doc = res.analytics[0]; // doc for this date
+          const loaded = doc.insights.map((ins, index) => ({
+            id: ins._id,
+            date: selectedDate,
+            type: 'knowledge',
+            icon: Sparkles,
+            title: ins.title || `Extracted Insight #${ins.number || index + 1}`,
+            content: ins.text,
+            tags: ['AI MEMORY']
+          }));
+          setInsights(loaded);
+        } else {
+          setInsights([]); 
+        }
+      } catch (err) {
+        console.error("Failed fetching insights", err);
+      }
+    };
+    fetchInsights();
+  }, [selectedDate]);
 
   const filteredInsights = insights.filter(i => i.date === selectedDate);
 

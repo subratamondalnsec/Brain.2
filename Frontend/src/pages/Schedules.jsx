@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, Calendar, Clock, ArrowRight, Play, CheckCircle2, ChevronRight, X, Filter } from 'lucide-react';
 import Sidebar from '../components/Common/Sidebar';
 import NewTask from '../components/Models/NewTask';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getSchedules } from '../api/analytics';
 
 const Schedules = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -13,12 +14,28 @@ const Schedules = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', time: '', date: '' });
 
-  const [tasks, setTasks] = useState([
-    { id: 1, title: 'System Diagnostics & Optimization', time: '10:00 AM', status: 'completed', date: todayStr },
-    { id: 2, title: 'Sync Neural Archives', time: '11:30 AM', status: 'completed', date: todayStr },
-    { id: 3, title: 'Project X Context Gathering', time: '02:00 PM', status: 'pending', date: todayStr },
-    { id: 4, title: 'Daily Insights Report Gen', time: '05:00 PM', status: 'pending', date: todayStr },
-  ]);
+  const [tasks, setTasks] = useState([]);
+
+  useEffect(() => {
+    const loadSchedules = async () => {
+      try {
+        const res = await getSchedules();
+        if (res.success && res.schedules) {
+          const formatted = res.schedules.map(sch => ({
+            id: sch._id,
+            title: sch.topic,
+            time: sch.time || 'All Day',
+            date: sch.date,
+            status: 'pending'
+          }));
+          setTasks(formatted);
+        }
+      } catch (error) {
+        console.error("Error fetching schedules:", error);
+      }
+    };
+    loadSchedules();
+  }, []);
 
   const handleAddTask = (e) => {
     e.preventDefault();

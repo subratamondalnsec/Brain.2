@@ -22,8 +22,8 @@ const processAudio = async (req, res) => {
         console.log("1. Sending audio to Diarization API...");
         const diarizeForm = new FormData();
         diarizeForm.append('file', fs.createReadStream(audioFile.tempFilePath), {
-            filename: audioFile.name || 'audio.mp3',
-            contentType: audioFile.mimetype || 'audio/mpeg'
+            filename: (audioFile.name || 'audio.mp3').replace('.webm', '.ogg'),
+            contentType: (audioFile.name && audioFile.name.endsWith('.webm')) ? 'audio/ogg' : (audioFile.mimetype || 'audio/mpeg')
         });
         
         const diarizeRes = await axios.post('https://gdas123-secondbrain-diarization.hf.space/diarize', diarizeForm, {
@@ -41,8 +41,8 @@ const processAudio = async (req, res) => {
         const assemblerUrl = process.env.AUDIO_ASSEMBLER_URL || "http://127.0.0.1:6000";
         const assembleForm = new FormData();
         assembleForm.append('raw_audio', fs.createReadStream(audioFile.tempFilePath), {
-            filename: audioFile.name || 'audio.mp3',
-            contentType: audioFile.mimetype || 'audio/mpeg'
+            filename: (audioFile.name || 'audio.mp3').replace('.webm', '.ogg'),
+            contentType: (audioFile.name && audioFile.name.endsWith('.webm')) ? 'audio/ogg' : (audioFile.mimetype || 'audio/mpeg')
         });
         assembleForm.append('segments', JSON.stringify({ segments }));
         
@@ -82,7 +82,7 @@ Transcription:
 Output ONLY a raw JSON object containing the fields below. Do not wrap in markdown \`\`\`json.
 {
   "insights": [
-    { "no": 1, "text": "Extracted key insight or summary point here." }
+    { "no": 1, "title": "A short 4-word crisp subject summary", "text": "Detailed explanation of the key facts, insights, context, or decisions discussed." }
   ],
   "schedules": [
     {
@@ -111,6 +111,7 @@ If there are no insights or schedules, return empty arrays. If the time is not m
                 const doc = await Insight.create({
                     userId,
                     date,
+                    title: ins.title || 'Captured Context',
                     text: ins.text,
                     number: ins.no || 1
                 });
@@ -132,24 +133,35 @@ If there are no insights or schedules, return empty arrays. If the time is not m
         }
         
         // 5. Link in Analytics 
-        console.log("5. Updating Analytics records...");
+        console.log("5. Updating Analytics records for date:", date);
         let analyticsDoc = await Analytics.findOne({ userId, date });
+        
         if (!analyticsDoc) {
+            console.log("— Creating new Analytics record...");
             analyticsDoc = await Analytics.create({
                 userId,
                 date,
                 insights: createdInsights,
-                schedules: createdSchedules
+                schedules: createdSchedules,
+                transcriptions: transcript ? [transcript] : []
             });
+            console.log("— Analytics created successfully.");
         } else {
+            console.log("— Updating existing Analytics record...");
             analyticsDoc.insights.push(...createdInsights);
             analyticsDoc.schedules.push(...createdSchedules);
+            if (transcript) {
+                if (!analyticsDoc.transcriptions) analyticsDoc.transcriptions = [];
+                analyticsDoc.transcriptions.push(transcript);
+            }
             await analyticsDoc.save();
+            console.log("— Analytics updated successfully.");
         }
         
         return res.status(200).json({
             success: true,
             message: "Audio processed successfully.",
+            transcript: transcript,
             data: parsedJson
         });
         
