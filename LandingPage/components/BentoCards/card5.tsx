@@ -38,15 +38,15 @@ function Card5() {
             <div className="w-full bg-linear-to-br from-[rgba(40,50,70,0.8)] to-[rgba(20,25,35,0.8)] backdrop-blur-xl border-t border border-[rgba(170,202,255,0.1)] rounded-xl p-5 shadow-2xl relative z-10">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden border border-[rgba(170,202,255,0.3)] shrink-0 bg-white/5 shadow-inner">
-                        <img src="https://i.pravatar.cc/150?img=47" className="w-full h-full object-cover" alt="Jaime Vandervort" />
+                        <img src="https://media.licdn.com/dms/image/v2/D5635AQHLcWzpTiszfQ/profile-framedphoto-shrink_800_800/B56ZuH5vE_GwAg-/0/1767511618311?e=1774706400&v=beta&t=hAdIgStnhwOWEZeDIcF4ItOWhEgTy_rd9O_GP5sfmH0" className="w-full h-full object-cover" alt="Subhadip Jana" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[15px] font-medium text-white/95 tracking-wide">Jaime Vandervort</span>
-                        <span className="text-[13px] text-[rgba(170,202,255,0.6)]">jaime_V91@yahoo.com</span>
+                        <span className="text-[15px] font-medium text-white/95 tracking-wide">Subhadip Jana</span>
+                        <span className="text-[13px] text-[rgba(170,202,255,0.6)]">codesubhadip95@gmail.com</span>
                     </div>
                 </div>
                 <div className="text-[13px] text-[rgba(170,202,255,0.4)] leading-relaxed font-light">
-                    <span className="text-white/90 font-medium">Hi Jaime,</span> it's time of Daily Summary updates!<br />You have <span className="text-white/90 font-medium tracking-wide">3 new updates</span> today.
+                    <span className="text-white/90 font-medium">Hi Subhadip,</span> it's time of Daily Summary updates!<br />You have <span className="text-white/90 font-medium tracking-wide">3 new updates</span> today.
                 </div>
             </div>
 
