@@ -8,8 +8,9 @@ const FormData = require('form-data');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 
+
 const app = express();
-app.use(express.json());
+app.use(express.json()); 
 
 // Initialize multer for file uploads
 const upload = multer({ dest: 'uploads/' });
@@ -70,7 +71,9 @@ async function getVoiceEmbedding(filePath) {
 }
 
 // --- Endpoints ---
-
+app.get('/rag', (req, res) => {
+    res.send("RAG System API");
+});
 /**
  * 1. Upload Text
  * Body: { user_id, content, date (optional) }
