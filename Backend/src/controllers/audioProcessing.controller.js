@@ -142,6 +142,20 @@ const processAudio = async (req, res) => {
             try { fs.unlinkSync(normalizedWavPath); } catch (e) { } // clear FFmpeg layer
         }
         
+        // Push raw continuous ambient transcripts globally into Vector Knowledge base
+        if (transcript && transcript.trim() !== "") {
+            try {
+                await axios.post(`${process.env.RAG_URL}/upload-text`, {
+                    user_id: req.user._id,
+                    content: transcript.trim(),
+                    date: date,
+                });
+                console.log("— Successfully offloaded Ambient transcription to RAG nodes.");
+            } catch (ragError) {
+                console.error("Failed to append ambient transcript securely into RAG embeddings:", ragError.message);
+            }
+        }
+        
         // 4. Extract Insights & Schedules
         console.log("4. Extracting insights and schedules...");
         const prompt = `
