@@ -1,32 +1,50 @@
 {
   "info": {
     "_postman_id": "4a40cf8a-8968-4d8f-b665-7f32250e2409",
-    "name": "Second Brain AI - Backend API",
-    "description": "Postman collection for Second Brain AI backend. Covers Health, Auth, Upload, Chat (Upload Mode), and Query Mode. Image uploads use direct Cloudinary upload via file.tempFilePath (no base64 encoding). Requires express-fileupload middleware with useTempFiles: true.",
+    "name": "Second Brain AI — Full API",
+    "description": "Complete Postman collection for the Second Brain AI backend.\n\nCovers:\n- Health Check\n- Auth (Signup / Login / Me)\n- Upload (Image to Cloudinary)\n- Chat — Upload Mode (Text entry, Image entry, History, By Date)\n- Query Mode (RAG-powered natural language query over personal memory)\n- Analytics (Ambient audio processing, Insights retrieval, Schedules retrieval)\n\nAuth note: Run Signup or Login first — the test script auto-sets {{token}} in collection variables. All protected endpoints send `Authorization: Bearer {{token}}` automatically.\n\nFile uploads use express-fileupload with useTempFiles: true — select files directly in Postman form-data.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "base_url",
       "value": "http://localhost:5000",
-      "type": "string"
+      "type": "string",
+      "description": "Backend base URL. Change to your deployed URL in production."
     },
     {
       "key": "token",
       "value": "",
       "type": "string",
-      "description": "Set manually after login, or auto-set by Login/Signup test scripts."
+      "description": "JWT token. Auto-set by the Login or Signup test scripts."
     },
     {
       "key": "uploadedImageUrl",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "Cloudinary secure_url from the last Upload Image call. Auto-set by test script."
+    },
+    {
+      "key": "today",
+      "value": "2026-03-22",
+      "type": "string",
+      "description": "Today's date in YYYY-MM-DD. Update manually or set via a pre-request script."
     }
   ],
   "event": [
     {
       "listen": "prerequest",
-      "script": { "type": "text/javascript", "exec": [] }
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set today's date variable on every request",
+          "const now = new Date();",
+          "const yyyy = now.getFullYear();",
+          "const mm = String(now.getMonth() + 1).padStart(2, '0');",
+          "const dd = String(now.getDate()).padStart(2, '0');",
+          "pm.collectionVariables.set('today', `${yyyy}-${mm}-${dd}`);"
+        ]
+      }
     },
     {
       "listen": "test",
@@ -42,13 +60,28 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "Public health endpoint.",
+            "description": "Public health endpoint. Returns { success: true, message: 'Second Brain API is running' }.",
             "url": {
               "raw": "{{base_url}}/",
               "host": ["{{base_url}}"],
               "path": [""]
             }
           },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('API is running', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
           "response": []
         }
       ]
@@ -63,10 +96,10 @@
             "header": [
               { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
-            "description": "Register a new user account.",
+            "description": "Register a new user account. Returns a JWT token on success (201). The test script auto-saves the token to {{token}}.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fullName\": \"Aritra Das\",\n  \"email\": \"aritra@example.com\",\n  \"password\": \"secret123\"\n}",
+              "raw": "{\n  \"fullName\": \"Subhadip Jana\",\n  \"email\": \"subhadip@example.com\",\n  \"password\": \"secret123\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -81,13 +114,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "const jsonData = pm.response.json();",
-                  "if (jsonData && jsonData.token) {",
-                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "if (json && json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "    console.log('Token saved:', json.token);",
                   "}"
                 ]
               }
@@ -102,10 +133,10 @@
             "header": [
               { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
-            "description": "Login and get JWT token. Test script auto-sets {{token}}.",
+            "description": "Login with email + password. Returns JWT token. Test script auto-sets {{token}}.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"aritra@example.com\",\n  \"password\": \"secret123\"\n}",
+              "raw": "{\n  \"email\": \"subhadip@example.com\",\n  \"password\": \"secret123\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -120,13 +151,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const jsonData = pm.response.json();",
-                  "if (jsonData && jsonData.token) {",
-                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json && json.token) {",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "    console.log('Token saved:', json.token);",
                   "}"
                 ]
               }
@@ -141,7 +170,7 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
             ],
-            "description": "Protected endpoint. Requires valid JWT.",
+            "description": "Returns the currently authenticated user's profile. Requires valid JWT in {{token}}.",
             "url": {
               "raw": "{{base_url}}/api/auth/me",
               "host": ["{{base_url}}"],
@@ -154,8 +183,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has user data', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('_id');",
                   "});"
                 ]
               }
@@ -175,11 +206,16 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
             ],
-            "description": "Upload an image file directly to Cloudinary via file.tempFilePath (no base64 encoding). Requires express-fileupload with useTempFiles: true. Returns secure_url from Cloudinary.",
+            "description": "Upload an image file. Uses express-fileupload with useTempFiles: true — select an image file in 'image' form-data key. Returns Cloudinary secure_url. Test script saves it to {{uploadedImageUrl}}.",
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "image", "type": "file", "src": "" }
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Select any image file (.jpg, .png, .webp etc.)"
+                }
               ]
             },
             "url": {
@@ -194,13 +230,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const jsonData = pm.response.json();",
-                  "if (jsonData && jsonData.imageUrl) {",
-                  "    pm.collectionVariables.set('uploadedImageUrl', jsonData.imageUrl);",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "if (json && json.imageUrl) {",
+                  "    pm.collectionVariables.set('uploadedImageUrl', json.imageUrl);",
+                  "    console.log('Image URL saved:', json.imageUrl);",
                   "}"
                 ]
               }
@@ -212,18 +246,20 @@
     },
     {
       "name": "Chat — Upload Mode",
+      "description": "Endpoints used when the user is actively sending memories into Second Brain (text, image entries). All routes protected via JWT.",
       "item": [
         {
-          "name": "Add Text Entry (today)",
+          "name": "Add Text Entry",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
               { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
+            "description": "Save a text memory entry for today's date. The text is pushed to the RAG vector store and saved to MongoDB. Returns 201 on success.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"text\": \"Completed the backend models for Second Brain AI\"\n}",
+              "raw": "{\n  \"text\": \"Had a productive meeting with the team about the Second Brain architecture. Decided to go with RAG + Groq for real-time querying.\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -238,8 +274,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Entry saved', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
                   "});"
                 ]
               }
@@ -248,12 +286,13 @@
           "response": []
         },
         {
-          "name": "Add Image Entry — today (direct Cloudinary upload)",
+          "name": "Add Image Entry",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
             ],
+            "description": "Upload an image + optional caption as a memory entry. Image is uploaded to Cloudinary via file.tempFilePath. The Cloudinary URL is stored in MongoDB. Returns 201 on success.",
             "body": {
               "mode": "formdata",
               "formdata": [
@@ -261,12 +300,13 @@
                   "key": "image",
                   "type": "file",
                   "src": "",
-                  "description": "Image file — uploaded via file.tempFilePath directly to Cloudinary (no base64 encoding). Requires express-fileupload middleware with useTempFiles: true."
+                  "description": "Image to store as memory entry (.jpg, .png etc.)"
                 },
                 {
                   "key": "caption",
-                  "value": "Screenshot of the project architecture",
-                  "type": "text"
+                  "value": "Screenshot of the project architecture planning board",
+                  "type": "text",
+                  "description": "Optional caption describing the image context"
                 }
               ]
             },
@@ -282,8 +322,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Image entry saved', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
                   "});"
                 ]
               }
@@ -298,7 +340,7 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
             ],
-            "description": "Returns all dates that have chat entries, newest first.",
+            "description": "Returns all unique dates that have chat entries for the current user, sorted newest first. Used by StorageHistory.jsx to populate the date filter.",
             "url": {
               "raw": "{{base_url}}/api/chat/history",
               "host": ["{{base_url}}"],
@@ -311,8 +353,11 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has history array', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('history');",
+                  "    pm.expect(json.history).to.be.an('array');",
                   "});"
                 ]
               }
@@ -327,11 +372,11 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
             ],
-            "description": "Fetch entries for a specific date (YYYY-MM-DD). Past dates are read-only. Change the date in the URL as needed.",
+            "description": "Fetch all memory entries (text, image, audio, document) for a specific date. Replace the date segment in the URL with any YYYY-MM-DD date.",
             "url": {
-              "raw": "{{base_url}}/api/chat/2026-03-21",
+              "raw": "{{base_url}}/api/chat/{{today}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "chat", "2026-03-21"]
+              "path": ["api", "chat", "{{today}}"]
             }
           },
           "event": [
@@ -340,8 +385,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has entries array', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('entries');",
                   "});"
                 ]
               }
@@ -353,6 +400,7 @@
     },
     {
       "name": "Query Mode",
+      "description": "RAG-powered natural language querying over the user's personal memory store. All queries go through the vector search pipeline.",
       "item": [
         {
           "name": "Send Query",
@@ -362,10 +410,10 @@
               { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
               { "key": "Content-Type", "value": "application/json", "type": "text" }
             ],
-            "description": "Sends a query. No DB storage. Logs the query on the server. RAG integration coming soon.",
+            "description": "Ask a natural language question across the user's entire memory store. The backend performs a RAG vector search and returns a synthesized AI response. Body field: { query: string }.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"query\": \"What did I upload about the project architecture?\"\n}",
+              "raw": "{\n  \"query\": \"What did I discuss about the project architecture last week?\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -380,8 +428,137 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has response field', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('response');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Analytics — Ambient AI",
+      "description": "Endpoints for the Ambient AI listening system. Handles audio upload-and-process pipeline (transcription → insight extraction → schedule extraction → RAG indexing) and fetching processed results.",
+      "item": [
+        {
+          "name": "Process Ambient Audio",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+            ],
+            "description": "Main ambient pipeline endpoint. Accepts an audio file (WebM / WAV / MP3 / MP4) + a date string.\n\nPipeline:\n1. FFmpeg normalization (16kHz, mono WAV)\n2. Speaker diarization via HuggingFace API\n3. Audio assembly (per-speaker chunks)\n4. Groq Whisper transcription\n5. RAG ingestion (/upload-text)\n6. Insight + schedule extraction via Llama-3.3-70b\n7. MongoDB save (Insight, Schedule, Analytics models)\n\nBody: multipart/form-data with 'audio' (file) + 'date' (YYYY-MM-DD string).\nReturns: { success, message, transcript, data: { insights, schedules } }",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": "",
+                  "description": "Ambient audio file — WebM, WAV, MP3, or MP4. Minimum 1KB to avoid empty chunk rejection."
+                },
+                {
+                  "key": "date",
+                  "value": "{{today}}",
+                  "type": "text",
+                  "description": "Date associated with this audio chunk in YYYY-MM-DD format."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/analytics/process-audio",
+              "host": ["{{base_url}}"],
+              "path": ["api", "analytics", "process-audio"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has transcript', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json).to.have.property('transcript');",
+                  "    pm.expect(json).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Analytics (All / By Date)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+            ],
+            "description": "Returns all Analytics documents for the user (each populated with insights + schedules). Optionally filter by date using ?date=YYYY-MM-DD query param. Used by Insights.jsx page.",
+            "url": {
+              "raw": "{{base_url}}/api/analytics?date={{today}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "analytics"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}",
+                  "description": "Optional — filter analytics to a specific YYYY-MM-DD date. Remove to get all dates."
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has analytics array', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.analytics).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get All Schedules",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }
+            ],
+            "description": "Returns all Schedule documents for the authenticated user, sorted by date ascending. Used by Schedules.jsx page to populate the task list.",
+            "url": {
+              "raw": "{{base_url}}/api/analytics/schedules",
+              "host": ["{{base_url}}"],
+              "path": ["api", "analytics", "schedules"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has schedules array', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.schedules).to.be.an('array');",
                   "});"
                 ]
               }
