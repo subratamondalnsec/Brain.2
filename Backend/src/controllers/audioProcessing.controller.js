@@ -46,7 +46,8 @@ const processAudio = async (req, res) => {
         
         let mergedSegments = [];
         try {
-            const diarizeRes = await axios.post('https://gdas123-secondbrain-diarization.hf.space/diarize', diarizeForm, {
+            const diarizationApiUrl = process.env.DIARIZATION_API_URL || "https://gdas123-secondbrain-diarization.hf.space/diarize";
+            const diarizeRes = await axios.post(diarizationApiUrl, diarizeForm, {
                 headers: diarizeForm.getHeaders(),
                 maxBodyLength: Infinity
             });
