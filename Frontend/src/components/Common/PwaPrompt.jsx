@@ -57,13 +57,13 @@ const PwaPrompt = () => {
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: 120, opacity: 0 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-md"
+                    className="fixed bottom-5 left-1/2 -translate-x-1/2 z-9999 w-[calc(100%-2rem)] max-w-md"
                 >
                     <div className="relative flex items-center gap-3 bg-[#030508]/95 backdrop-blur-2xl border border-[#348fc0]/30 rounded-2xl px-4 py-3 shadow-[0_8px_40px_rgba(0,0,0,0.6),0_0_0_1px_rgba(52,143,192,0.1)] overflow-hidden">
                         
                         {/* Background ambient glow */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#348fc0]/5 via-transparent to-[#348fc0]/5 pointer-events-none" />
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-[#348fc0]/40 to-transparent" />
+                        <div className="absolute inset-0 bg-linear-to-r from-[#348fc0]/5 via-transparent to-[#348fc0]/5 pointer-events-none" />
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-linear-to-r from-transparent via-[#348fc0]/40 to-transparent" />
 
                         {/* Brain Icon */}
                         <div className="shrink-0 w-10 h-10 rounded-xl bg-[#348fc0]/10 border border-[#348fc0]/20 flex items-center justify-center shadow-[0_0_12px_rgba(52,143,192,0.2)]">
