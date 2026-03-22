@@ -1,5 +1,5 @@
 // Brain.2 Service Worker — Cache-first strategy for static assets
-const CACHE_NAME = 'brain2-v1';
+const CACHE_NAME = 'brain2-v2';
 
 const STATIC_ASSETS = [
   '/',
