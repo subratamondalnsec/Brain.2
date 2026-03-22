@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VoiceSplice — Speaker Audio Assembler</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #090910;
+      --surface:  #0f0f18;
+      --surface2: #13131e;
+      --border:   #1c1c2e;
+      --border2:  #252538;
+      --accent:   #6d28d9;
+      --accent-l: #8b5cf6;
+      --cyan:     #06b6d4;
+      --amber:    #f59e0b;
+      --green:    #10b981;
+      --red:      #ef4444;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --muted2:   #94a3b8;
+      --r:        14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* subtle grain */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 999;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 400px;
+      background: radial-gradient(ellipse, rgba(109,40,217,0.1) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.04em; }
+    .logo em { color: var(--accent-l); font-style: normal; }
+
+    .server-status {
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; color: var(--muted);
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted); transition: background 0.3s;
+    }
+    .dot.online  { background: var(--green); box-shadow: 0 0 7px var(--green); }
+    .dot.offline { background: var(--red); }
+
+    /* ── Layout ── */
+    main {
+      position: relative; z-index: 1;
+      max-width: 960px; margin: 0 auto;
+      padding: 44px 24px 90px;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    .card-head {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 26px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(109,40,217,0.05), transparent);
+    }
+    .step-num {
+      width: 30px; height: 30px; flex-shrink: 0;
+      border-radius: 50%; border: 1.5px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; color: var(--accent-l);
+    }
+    .card-title { font-size: 0.97rem; font-weight: 700; }
+    .card-sub   { font-size: 0.77rem; color: var(--muted2); margin-top: 2px; }
+    .card-body  { padding: 22px 26px; }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed var(--border2); border-radius: 10px;
+      padding: 32px 20px; text-align: center;
+      cursor: pointer; position: relative; transition: all 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.over {
+      border-color: var(--accent-l); background: rgba(109,40,217,0.04);
+    }
+    .drop-zone input[type=file] {
+      position: absolute; inset: 0; opacity: 0;
+      cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-icon { font-size: 2rem; margin-bottom: 8px; }
+    .drop-hint  { color: var(--muted2); font-size: 0.86rem; }
+    .drop-fmt   { margin-top: 5px; font-family: 'JetBrains Mono',monospace; font-size: 0.68rem; color: var(--muted); }
+
+    .file-pill {
+      margin-top: 12px; display: none;
+      align-items: center; gap: 8px;
+      background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.25);
+      border-radius: 100px; padding: 5px 14px;
+      font-family: 'JetBrains Mono',monospace; font-size: 0.74rem; color: var(--cyan);
+    }
+    .file-pill.show { display: inline-flex; }
+
+    /* ── Speakers panel ── */
+    .spk-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 9px; padding: 12px 16px; margin-bottom: 16px; gap: 12px;
+      flex-wrap: wrap;
+    }
+    .spk-bar-left { display: flex; align-items: center; gap: 10px; }
+    .folder-path {
+      font-family: 'JetBrains Mono',monospace; font-size: 0.71rem;
+      color: var(--cyan); word-break: break-all;
+    }
+    .btn-refresh {
+      background: none; border: 1px solid var(--border2); border-radius: 7px;
+      color: var(--muted2); font-family: 'Syne',sans-serif; font-size: 0.77rem;
+      padding: 6px 13px; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+    }
+    .btn-refresh:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 100px; padding: 3px 11px;
+      font-family: 'JetBrains Mono',monospace; font-size: 0.71rem; color: var(--green);
+    }
+    .chip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+    .no-chips { font-family: 'JetBrains Mono',monospace; font-size: 0.76rem; color: var(--muted); font-style: italic; }
+
+    .hint-box {
+      margin-top: 16px; padding: 13px 16px;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
+    }
+    .hint-title { font-size: 0.73rem; font-weight: 700; color: var(--amber); margin-bottom: 7px; }
+    .hint-body  { font-family: 'JetBrains Mono',monospace; font-size: 0.71rem; color: var(--muted2); line-height: 1.9; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 6px; margin-bottom: 18px; }
+    .tab {
+      background: none; border: 1px solid var(--border2); border-radius: 7px;
+      color: var(--muted); font-family: 'Syne',sans-serif; font-size: 0.79rem;
+      padding: 6px 15px; cursor: pointer; transition: all 0.2s;
+    }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tab-panel  { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Segment table ── */
+    .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.81rem; }
+    thead { background: var(--surface2); }
+    th {
+      text-align: left;
+      font-family: 'JetBrains Mono',monospace;
+      font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); padding: 10px 13px;
+    }
+    td { padding: 8px 13px; border-top: 1px solid var(--border); }
+    tbody tr:hover td { background: rgba(109,40,217,0.03); }
+
+    .si {
+      background: #0a0a14; border: 1px solid var(--border2); border-radius: 6px;
+      color: var(--text); font-family: 'JetBrains Mono',monospace; font-size: 0.79rem;
+      padding: 5px 9px; width: 100%; outline: none; transition: border-color 0.2s;
+    }
+    .si:focus { border-color: var(--accent-l); }
+    .si-spk  { width: 120px; }
+    .si-time { width: 110px; }
+
+    .rn   { font-family: 'JetBrains Mono',monospace; font-size: 0.68rem; color: var(--muted); }
+    .badge {
+      display: inline-block; margin-top: 2px;
+      background: rgba(109,40,217,0.14); border: 1px solid rgba(109,40,217,0.28);
+      border-radius: 4px; font-family: 'JetBrains Mono',monospace;
+      font-size: 0.63rem; color: var(--accent-l); padding: 1px 5px;
+    }
+
+    .btn-del {
+      background: none; border: none; color: var(--red);
+      cursor: pointer; opacity: 0.4; font-size: 0.83rem; padding: 3px;
+      transition: opacity 0.2s;
+    }
+    .btn-del:hover { opacity: 1; }
+
+    .btn-add-seg {
+      margin-top: 11px; background: none;
+      border: 1px dashed var(--border2); border-radius: 7px;
+      color: var(--muted); font-family: 'Syne',sans-serif; font-size: 0.79rem;
+      padding: 8px 16px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-add-seg:hover { border-color: var(--cyan); color: var(--cyan); }
+
+    .seg-badge {
+      margin-left: auto;
+      font-family: 'JetBrains Mono',monospace; font-size: 0.68rem;
+      background: rgba(109,40,217,0.13); border: 1px solid rgba(109,40,217,0.23);
+      border-radius: 100px; padding: 2px 9px; color: var(--accent-l);
+    }
+
+    /* ── JSON tab ── */
+    .json-area {
+      background: #0a0a14; border: 1px solid var(--border); border-radius: 7px;
+      color: var(--cyan); font-family: 'JetBrains Mono',monospace; font-size: 0.75rem;
+      padding: 12px; width: 100%; height: 130px; resize: vertical; outline: none;
+      transition: border-color 0.2s;
+    }
+    .json-area:focus { border-color: var(--accent-l); }
+    .btn-parse {
+      margin-top: 9px; background: none; border: 1px solid var(--cyan);
+      border-radius: 7px; color: var(--cyan); font-family: 'Syne',sans-serif;
+      font-size: 0.79rem; padding: 7px 18px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-parse:hover { background: var(--cyan); color: #000; }
+
+    /* ── Assemble area ── */
+    .assemble-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      padding: 36px 24px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+    }
+
+    .btn-assemble {
+      background: linear-gradient(135deg, var(--accent), #9333ea);
+      border: none; border-radius: 11px; color: #fff;
+      font-family: 'Syne',sans-serif; font-size: 1.02rem; font-weight: 800;
+      padding: 17px 60px; cursor: pointer; letter-spacing: 0.04em;
+      box-shadow: 0 0 36px rgba(109,40,217,0.25);
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    }
+    .btn-assemble:hover:not(:disabled) {
+      transform: translateY(-2px); box-shadow: 0 0 60px rgba(109,40,217,0.42);
+    }
+    .btn-assemble:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Progress */
+    .prog-wrap { width: 100%; max-width: 480px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .prog-wrap.show { opacity: 1; }
+    .prog-steps { display: flex; justify-content: space-between; margin-bottom: 9px; }
+    .ps {
+      font-family: 'JetBrains Mono',monospace; font-size: 0.65rem; color: var(--muted);
+      transition: color 0.3s;
+    }
+    .ps.active { color: var(--accent-l); }
+    .ps.done   { color: var(--green); }
+    .prog-track { height: 3px; background: var(--border); border-radius: 100px; overflow: hidden; }
+    .prog-fill  {
+      height: 100%; border-radius: 100px; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    }
+    .prog-lbl {
+      margin-top: 7px; text-align: center;
+      font-family: 'JetBrains Mono',monospace; font-size: 0.71rem; color: var(--muted);
+    }
+
+    /* Status message */
+    .status {
+      width: 100%; max-width: 480px;
+      font-family: 'JetBrains Mono',monospace; font-size: 0.79rem;
+      padding: 11px 16px; border-radius: 7px;
+      white-space: pre-wrap; display: none; line-height: 1.5;
+    }
+    .status.ok   { display: block; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);  color: var(--green); }
+    .status.err  { display: block; background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.2);   color: var(--red); }
+    .status.warn { display: block; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);  color: var(--amber); }
+
+    /* Download */
+    .btn-dl {
+      display: none; align-items: center; gap: 9px;
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.28);
+      border-radius: 9px; color: var(--green);
+      font-family: 'Syne',sans-serif; font-weight: 700; font-size: 0.93rem;
+      padding: 13px 32px; text-decoration: none; transition: background 0.2s, transform 0.2s;
+    }
+    .btn-dl.show { display: flex; }
+    .btn-dl:hover { background: rgba(16,185,129,0.18); transform: translateY(-1px); }
+
+    @media (max-width: 600px) {
+      header { padding: 16px 18px; }
+      main   { padding: 26px 14px 70px; }
+      .card-head, .card-body { padding: 16px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Voice<em>Splice</em></div>
+  <div class="server-status">
+    <div class="dot" id="dot"></div>
+    <span id="srv-txt">checking…</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ══ STEP 1 ══ -->
+  <div class="card">
+    <div class="card-head">
+      <div class="step-num">01</div>
+      <div>
+        <div class="card-title">Upload Original Audio</div>
+        <div class="card-sub">Your full conversation recording — WAV, MP3, FLAC, M4A</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="drop-zone" id="rawDrop">
+        <input type="file" id="rawFile" accept="audio/*"/>
+        <div class="drop-icon">🎙️</div>
+        <div class="drop-hint">Drop audio here or click to browse</div>
+        <div class="drop-fmt">wav · mp3 · flac · m4a · ogg</div>
+      </div>
+      <div class="file-pill" id="filePill">
+        <span>🎵</span><span id="fileNameTxt"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2 ══ -->
+  <div class="card">
+    <div class="card-head">
+      <div class="step-num">02</div>
+      <div>
+        <div class="card-title">Speaker Label Files</div>
+        <div class="card-sub">Auto-loaded from the <code style="color:var(--cyan)">speakers/</code> folder — no upload needed</div>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <div class="spk-bar">
+        <div class="spk-bar-left">
+          <span style="font-size:1.3rem">📁</span>
+          <div>
+            <div style="font-size:0.73rem; font-weight:700; margin-bottom:2px;">speakers/ folder</div>
+            <div class="folder-path" id="folderPath">loading…</div>
+          </div>
+        </div>
+        <button class="btn-refresh" onclick="loadSpeakers()">↻ Refresh</button>
+      </div>
+
+      <div class="chips" id="chips">
+        <span class="no-chips">No files detected…</span>
+      </div>
+
+      <div class="hint-box">
+        <div class="hint-title">📌 Naming your label clips</div>
+        <div class="hint-body">
+          Place clips in <span style="color:var(--cyan)">audio-assembler\speakers\</span><br>
+          Name them: <span style="color:var(--green)">Speaker_00.mp3</span> · <span style="color:var(--green)">Speaker_01.mp3</span> · <span style="color:var(--green)">Speaker_02.mp3</span><br>
+          Each clip should say e.g. <em>"Speaker 1 is speaking."</em><br>
+          <span style="color:var(--amber)">SPEAKER_00</span> in JSON → automatically matches <span style="color:var(--green)">Speaker_00.mp3</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ STEP 3 ══ -->
+  <div class="card">
+    <div class="card-head">
+      <div class="step-num">03</div>
+      <div style="flex:1; display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+        <div>
+          <div class="card-title">Diarization Segments</div>
+          <div class="card-sub">Who spoke when — type manually or paste JSON</div>
+        </div>
+        <span class="seg-badge" id="segBadge">0 segments</span>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <div class="tabs">
+        <button class="tab active" id="tb-manual" onclick="tab('manual')">✏️ Manual</button>
+        <button class="tab"        id="tb-json"   onclick="tab('json')">{ } JSON</button>
+      </div>
+
+      <div class="tab-panel active" id="tp-manual">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Speaker ID</th>
+                <th>Start (sec)</th>
+                <th>End (sec)</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="segTbody"></tbody>
+          </table>
+        </div>
+        <button class="btn-add-seg" onclick="addRow()">＋ Add Segment</button>
+      </div>
+
+      <div class="tab-panel" id="tp-json">
+        <p style="font-family:'JetBrains Mono',monospace; font-size:0.73rem; color:var(--muted); margin-bottom:11px; line-height:1.8;">
+          Paste your diarization JSON.<br>
+          Supports: <span style="color:var(--cyan)">{"SpeakerID":"SPEAKER_00","startTimestamp":0,"endTimestamp":5.2}</span><br>
+          Or simple: <span style="color:var(--muted2)">{"speaker":"1","start":0,"end":5.2}</span><br>
+          You can paste the <strong style="color:var(--amber)">entire API response object</strong> — segments extracted automatically.
+        </p>
+        <textarea class="json-area" id="jsonArea" placeholder='{
+  "success": true,
+  "segments": [
+    {"SpeakerID":"SPEAKER_00","startTimestamp":0.637,"endTimestamp":1.095},
+    {"SpeakerID":"SPEAKER_01","startTimestamp":2.504,"endTimestamp":3.031}
+  ]
+}'></textarea>
+        <button class="btn-parse" onclick="parseJSON()">Parse → Load Segments</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ ASSEMBLE ══ -->
+  <div class="assemble-wrap">
+
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-steps">
+        <span class="ps" id="ps0">LOAD</span>
+        <span class="ps" id="ps1">DECODE</span>
+        <span class="ps" id="ps2">NORMALIZE</span>
+        <span class="ps" id="ps3">CROSSFADE</span>
+        <span class="ps" id="ps4">ENCODE</span>
+        <span class="ps" id="ps5">DONE</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+      <div class="prog-lbl"  id="progLbl">Starting…</div>
+    </div>
+
+    <div class="status" id="statusMsg"></div>
+
+    <a class="btn-dl" id="dlBtn" href="#" download="assembled_output.mp3">
+      ⬇&nbsp; Download Assembled Audio (.mp3)
+    </a>
+
+    <button class="btn-assemble" id="assembleBtn" onclick="assemble()">
+      ⚡ Assemble Audio
+    </button>
+
+  </div>
+
+</main>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+const API = "http://127.0.0.1:5000";
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let rows = [], rowId = 1;
+
+// ─── Server health ────────────────────────────────────────────────────────────
+async function checkServer() {
+  try {
+    const r = await fetch(`${API}/ping`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      document.getElementById('dot').className     = 'dot online';
+      document.getElementById('srv-txt').textContent = 'backend online';
+      return true;
+    }
+  } catch {}
+  document.getElementById('dot').className     = 'dot offline';
+  document.getElementById('srv-txt').textContent = 'backend offline — run: python app.py';
+  return false;
+}
+
+// ─── Speakers ─────────────────────────────────────────────────────────────────
+async function loadSpeakers() {
+  try {
+    const d = await fetch(`${API}/speakers`).then(r => r.json());
+    document.getElementById('folderPath').textContent = d.folder || 'speakers/';
+    const el = document.getElementById('chips');
+    if (!d.speakers?.length) {
+      el.innerHTML = '<span class="no-chips">No label files found in speakers/ folder</span>';
+    } else {
+      el.innerHTML = d.speakers.map(f =>
+        `<div class="chip"><div class="chip-dot"></div>${f}</div>`
+      ).join('');
+    }
+  } catch {
+    document.getElementById('chips').innerHTML =
+      '<span class="no-chips" style="color:var(--red)">Cannot reach backend</span>';
+  }
+}
+
+// ─── Drop zone ────────────────────────────────────────────────────────────────
+const rawDrop = document.getElementById('rawDrop');
+rawDrop.addEventListener('dragover',  e => { e.preventDefault(); rawDrop.classList.add('over'); });
+rawDrop.addEventListener('dragleave', ()  => rawDrop.classList.remove('over'));
+rawDrop.addEventListener('drop',      e  => { e.preventDefault(); rawDrop.classList.remove('over'); });
+document.getElementById('rawFile').addEventListener('change', function() {
+  const name = this.files[0]?.name || '';
+  document.getElementById('fileNameTxt').textContent = name;
+  document.getElementById('filePill').classList.toggle('show', !!name);
+});
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+function tab(name) {
+  ['manual','json'].forEach(n => {
+    document.getElementById(`tb-${n}`).classList.toggle('active', n === name);
+    document.getElementById(`tp-${n}`).classList.toggle('active', n === name);
+  });
+}
+
+// ─── Segment rows ─────────────────────────────────────────────────────────────
+function addRow(spk = '', start = '', end = '') {
+  rows.push({ id: rowId++, spk: String(spk), start: String(start), end: String(end) });
+  render();
+}
+function delRow(id) {
+  rows = rows.filter(r => r.id !== id);
+  render();
+}
+function upd(id, field, val) {
+  const r = rows.find(x => x.id === id);
+  if (r) r[field] = val;
+}
+function render() {
+  document.getElementById('segTbody').innerHTML = rows.map((r, i) => `
+    <tr>
+      <td><span class="rn">${i + 1}</span></td>
+      <td>
+        <input class="si si-spk" value="${r.spk}" placeholder="SPEAKER_00"
+          oninput="upd(${r.id},'spk',this.value)"/>
+        <div class="badge">${r.spk || '?'}</div>
+      </td>
+      <td>
+        <input class="si si-time" type="number" step="0.001" min="0"
+          value="${r.start}" placeholder="0.000"
+          oninput="upd(${r.id},'start',this.value)"/>
+      </td>
+      <td>
+        <input class="si si-time" type="number" step="0.001" min="0"
+          value="${r.end}" placeholder="0.000"
+          oninput="upd(${r.id},'end',this.value)"/>
+      </td>
+      <td><button class="btn-del" onclick="delRow(${r.id})">✕</button></td>
+    </tr>
+  `).join('');
+  document.getElementById('segBadge').textContent =
+    `${rows.length} segment${rows.length !== 1 ? 's' : ''}`;
+}
+
+// ─── JSON parser ──────────────────────────────────────────────────────────────
+function parseJSON() {
+  try {
+    let p = JSON.parse(document.getElementById('jsonArea').value);
+
+    // Unwrap full response object
+    if (!Array.isArray(p)) {
+      if (p.segments) p = p.segments;
+      else throw new Error("JSON object has no 'segments' array");
+    }
+    if (!p.length) throw new Error("Segments array is empty");
+
+    rows = []; rowId = 1;
+    p.forEach(d => {
+      const spk   = d.SpeakerID   ?? d.speaker_id ?? d.speakerId ?? d.speaker ?? '';
+      const start = d.startTimestamp ?? d.start_time ?? d.start ?? 0;
+      const end   = d.endTimestamp   ?? d.end_time   ?? d.end   ?? 0;
+      if (parseFloat(end) > parseFloat(start)) {
+        addRow(String(spk).trim(), start, end);
+      }
+    });
+
+    tab('manual');
+    setStatus('ok', `✓ Loaded ${rows.length} segments from JSON`);
+  } catch (e) {
+    setStatus('err', '✗ JSON error: ' + e.message);
+  }
+}
+
+// ─── Assemble ─────────────────────────────────────────────────────────────────
+async function assemble() {
+  const rawFile = document.getElementById('rawFile').files[0];
+  if (!rawFile)       return setStatus('err', '✗ Step 1: please upload an audio file first.');
+  if (!rows.length)   return setStatus('err', '✗ Step 3: please add at least one segment.');
+
+  // Validate rows
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r.spk)        return setStatus('err', `✗ Row ${i+1}: Speaker ID is empty.`);
+    if (r.start === '' || r.end === '')
+                       return setStatus('err', `✗ Row ${i+1}: Start/End time is empty.`);
+    if (parseFloat(r.start) >= parseFloat(r.end))
+                       return setStatus('err', `✗ Row ${i+1}: Start must be less than End.`);
+  }
+
+  // Build form data
+  const fd = new FormData();
+  fd.append('raw_audio', rawFile);
+  fd.append('segments', JSON.stringify(
+    rows.map(r => ({
+      SpeakerID:      r.spk,
+      startTimestamp: parseFloat(r.start),
+      endTimestamp:   parseFloat(r.end)
+    }))
+  ));
+
+  // Reset UI
+  document.getElementById('assembleBtn').disabled = true;
+  document.getElementById('dlBtn').classList.remove('show');
+  setStatus('', '');
+  setProgress(true, 0, 'Uploading audio…');
+
+  // Animate progress steps while waiting
+  const STEPS = [
+    [10, 'ps0', 'Loading audio files…'],
+    [25, 'ps1', 'Decoding audio…'],
+    [45, 'ps2', 'Normalising sample rate…'],
+    [65, 'ps3', 'Applying crossfades…'],
+    [82, 'ps4', 'Encoding MP3…'],
+  ];
+  let si = 0;
+  const iv = setInterval(() => {
+    if (si < STEPS.length) {
+      const [pct, id, lbl] = STEPS[si++];
+      setProgress(true, pct, lbl);
+      STEPS.slice(0, si).forEach(([,pid]) => {
+        const el = document.getElementById(pid);
+        if (el) el.className = 'ps done';
+      });
+    }
+  }, 700);
+
+  try {
+    const resp = await fetch(`${API}/assemble`, { method: 'POST', body: fd });
+    clearInterval(iv);
+
+    if (!resp.ok) {
+      let msg = resp.statusText;
+      try { msg = (await resp.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+
+    setProgress(true, 100, 'Complete!');
+    document.getElementById('ps5').className = 'ps done';
+
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const btn  = document.getElementById('dlBtn');
+    btn.href = url;
+    btn.classList.add('show');
+
+    const warn = resp.headers.get('X-Warning');
+    if (warn) {
+      setStatus('warn', '⚠ Done with warnings:\n' + warn);
+    } else {
+      setStatus('ok', '✓ Audio assembled — click Download to save your MP3.');
+    }
+
+  } catch (e) {
+    clearInterval(iv);
+    setStatus('err',
+      '✗ Error: ' + e.message + '\n\n' +
+      'Make sure the backend is running:\n  python app.py'
+    );
+  } finally {
+    setTimeout(() => setProgress(false), 1600);
+    document.getElementById('assembleBtn').disabled = false;
+  }
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+function setProgress(vis, pct = 0, lbl = '') {
+  document.getElementById('progWrap').classList.toggle('show', vis);
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progLbl').textContent  = lbl;
+  if (!vis) ['ps0','ps1','ps2','ps3','ps4','ps5']
+    .forEach(id => { const e = document.getElementById(id); if(e) e.className = 'ps'; });
+}
+function setStatus(type, msg) {
+  const el = document.getElementById('statusMsg');
+  el.className = 'status' + (type ? ' ' + type : '');
+  el.textContent = msg;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await checkServer();
+  await loadSpeakers();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+flask
+flask-cors
+numpy
+soundfile
+resampy
+librosa
+imageio
+imageio-ffmpeg
