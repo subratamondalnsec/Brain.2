@@ -1,5 +1,5 @@
 <div>
-  <img src="https://res.cloudinary.com/dfjuuwtr6/image/upload/v1773415113/73e1a4754baea4b4a6624dc31c62fc22_ltm77b.jpg" alt="Second Brain Logo" width="100%" height="450px" />
+  <img src="https://res.cloudinary.com/dfjuuwtr6/image/upload/v1774162392/Screenshot_2026-03-22_115159_qftixx.png" alt="Second Brain Logo" width="100%" height="500px" />
 
   # Second Brain
   
