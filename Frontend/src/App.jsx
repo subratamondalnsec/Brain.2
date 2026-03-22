@@ -7,6 +7,7 @@ import SendAsk from './pages/SendAsk';
 import Schedules from './pages/Schedules';
 import Insights from './pages/Insights';
 import StorageHistory from './pages/StorageHistory';
+import PwaPrompt from './components/Common/PwaPrompt';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -79,6 +80,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
+      <PwaPrompt />
     </AuthProvider>
   );
 }
