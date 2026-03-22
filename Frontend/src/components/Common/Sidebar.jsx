@@ -22,34 +22,61 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
 
   // 1. Media Recorder hook
   useEffect(() => {
+    let cycleInterval;
+    let persistentStream = null;
+
     if (isListening) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        const recorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = recorder;
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            const ext = recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
-            const file = new File([e.data], `ambient_${Date.now()}.${ext}`, { type: recorder.mimeType || 'audio/webm' });
-            setAmbientQueue(q => [...q, { id: Date.now(), file, status: 'queued' }]);
-          }
+        persistentStream = stream;
+
+        const createNewRecorder = () => {
+          const recorder = new MediaRecorder(stream);
+          const boundRecorder = recorder; // Closure reference isolating iteration states
+          
+          recorder.ondataavailable = (e) => {
+            // Guarantee valid size filtering empty container headers out strictly preventing Groq 400s
+            if (e.data.size > 1000) {
+              const ext = boundRecorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+              const file = new File([e.data], `ambient_${Date.now()}.${ext}`, { type: boundRecorder.mimeType || 'audio/webm' });
+              setAmbientQueue(q => [...q, { id: Date.now(), file, status: 'queued', retries: 0 }]);
+            }
+          };
+          recorder.start();
+          mediaRecorderRef.current = recorder;
         };
-        // Slice chunks every 1 minute for faster feedback
-        recorder.start(60 * 1000);
+
+        createNewRecorder(); // Initial binding
+
+        cycleInterval = setInterval(() => {
+          // Send terminal flush command on previous iteration securely completing chunk
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+          }
+          // Initialize fresh container identically seamlessly onto persisted hardware stream
+          createNewRecorder();
+        }, 60 * 1000);
+
       }).catch(err => {
         console.error("Microphone access denied or failed", err);
         setIsListening(false);
       });
     } else {
+      if (cycleInterval) clearInterval(cycleInterval);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+      if (persistentStream) {
+        persistentStream.getTracks().forEach(track => track.stop());
       }
     }
     
     return () => {
+      if (cycleInterval) clearInterval(cycleInterval);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+      if (persistentStream) {
+        persistentStream.getTracks().forEach(track => track.stop());
       }
     };
   }, [isListening]);
@@ -58,7 +85,7 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
   useEffect(() => {
     const processNext = async () => {
       // Don't pop new items if we are already bottlenecked
-      if (ambientQueue.some(item => item.status === 'processing')) return;
+      if (ambientQueue.some(item => item.status === 'processing' || item.status === 'cooldown')) return;
       
       const nextItem = ambientQueue.find(item => item.status === 'queued');
       if (!nextItem) return;
@@ -75,12 +102,27 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
 
         await processAudio(formData);
         
+        // 5s explicit cooldown throttling after processing finishes avoiding API burst overloads
+        setAmbientQueue(q => q.map(item => item.id === nextItem.id ? { ...item, status: 'cooldown' } : item));
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
         // Remove successfully processed array
         setAmbientQueue(q => q.filter(item => item.id !== nextItem.id));
       } catch (err) {
         console.error("Queue process error:", err);
-        // Drop back to queued status for retry
-        setAmbientQueue(q => q.map(item => item.id === nextItem.id ? { ...item, status: 'queued' } : item));
+        
+        setAmbientQueue(q => q.map(item => item.id === nextItem.id ? { ...item, status: 'cooldown' } : item));
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        // Ensure failed chunks don't permanently deadlock processor queues natively skipping silently 
+        setAmbientQueue(q => {
+          const item = q.find(i => i.id === nextItem.id);
+          if (item && item.retries < 1) {
+             return q.map(i => i.id === nextItem.id ? { ...i, status: 'queued', retries: i.retries + 1 } : i);
+          }
+          console.warn("Discarding heavily unprocessable memory chunk resolving blockages");
+          return q.filter(i => i.id !== nextItem.id);
+        });
       }
     };
 
@@ -197,9 +239,9 @@ function Sidebar({ isSidebarOpen, setSidebarOpen }) {
                   {ambientQueue.map(item => (
                     <div key={item.id} className="flex justify-between items-center bg-white/5 rounded-lg p-2 border border-white/5">
                       <span className="text-[11px] text-white/70 truncate w-[60%] font-mono">{item.file.name}</span>
-                      <span className={`text-[10px] font-medium flex items-center gap-1 ${item.status === 'processing' ? 'text-amber-400' : 'text-blue-300'}`}>
+                      <span className={`text-[10px] font-medium flex items-center gap-1 ${item.status === 'processing' ? 'text-amber-400' : item.status === 'cooldown' ? 'text-emerald-400' : 'text-blue-300'}`}>
                         {item.status === 'processing' && <Loader2 size={10} className="animate-spin" />}
-                        {item.status === 'processing' ? 'Processing...' : 'Queued'}
+                        {item.status === 'processing' ? 'Processing...' : item.status === 'cooldown' ? 'Cooling down...' : 'Queued'}
                       </span>
                     </div>
                   ))}

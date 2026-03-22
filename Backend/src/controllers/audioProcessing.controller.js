@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const FormData = require('form-data');
 const path = require('path');
+const { execSync } = require('child_process');
 const Groq = require('groq-sdk');
 const Insight = require('../models/Insight');
 const Schedule = require('../models/Schedule');
@@ -18,57 +19,128 @@ const processAudio = async (req, res) => {
         
         const audioFile = req.files.audio || req.files.voice;
         
+        // 0. Normalize WebM stream offsets locally completely rebuilding strict EBML Cues
+        // Forces DOM absolute timestamps (e.g. tracking index 60s) directly back to 0.0s baseline smoothly securely bypassing Pydub slicing mismatch blocks
+        const normalizedWavPath = path.join(__dirname, `../temp_normalized_${Date.now()}.wav`);
+        let activeProcessPath = audioFile.tempFilePath;
+        let activeMimeType = (audioFile.name && audioFile.name.endsWith('.webm')) ? 'audio/ogg' : (audioFile.mimetype || 'audio/mpeg');
+        let activeFilename = (audioFile.name || 'audio.mp3').replace('.webm', '.ogg');
+
+        try {
+            console.log("0. Normalizing stream payload...");
+            execSync(`ffmpeg -y -i "${audioFile.tempFilePath}" -ar 16000 -ac 1 "${normalizedWavPath}"`, { stdio: 'ignore' });
+            activeProcessPath = normalizedWavPath;
+            activeFilename = 'audio.wav';
+            activeMimeType = 'audio/wav';
+        } catch (normErr) {
+            console.warn("FFmpeg normalization bypassed natively (using raw container limits).", normErr.message);
+        }
+
         // 1. Diarize via HF
         console.log("1. Sending audio to Diarization API...");
         const diarizeForm = new FormData();
-        diarizeForm.append('file', fs.createReadStream(audioFile.tempFilePath), {
-            filename: (audioFile.name || 'audio.mp3').replace('.webm', '.ogg'),
-            contentType: (audioFile.name && audioFile.name.endsWith('.webm')) ? 'audio/ogg' : (audioFile.mimetype || 'audio/mpeg')
+        diarizeForm.append('file', fs.createReadStream(activeProcessPath), {
+            filename: activeFilename,
+            contentType: activeMimeType
         });
         
-        const diarizeRes = await axios.post('https://gdas123-secondbrain-diarization.hf.space/diarize', diarizeForm, {
-            headers: diarizeForm.getHeaders(),
-            maxBodyLength: Infinity
-        });
-        
-        if (!diarizeRes.data.success || !diarizeRes.data.segments) {
-            throw new Error("Diarization failed to return valid segments");
+        let mergedSegments = [];
+        try {
+            const diarizeRes = await axios.post('https://gdas123-secondbrain-diarization.hf.space/diarize', diarizeForm, {
+                headers: diarizeForm.getHeaders(),
+                maxBodyLength: Infinity
+            });
+            
+            if (diarizeRes.data.success && diarizeRes.data.segments) {
+                const rawSegments = diarizeRes.data.segments;
+                let currentSeg = null;
+                let segCounter = 1;
+
+                for (const seg of rawSegments) {
+                    if (!currentSeg) {
+                        currentSeg = { ...seg, segmentNumber: segCounter };
+                    } else if (currentSeg.SpeakerID === seg.SpeakerID) {
+                        currentSeg.endTimestamp = seg.endTimestamp;
+                        currentSeg.duration = currentSeg.endTimestamp - currentSeg.startTimestamp;
+                    } else {
+                        mergedSegments.push(currentSeg);
+                        segCounter++;
+                        currentSeg = { ...seg, segmentNumber: segCounter };
+                    }
+                }
+                if (currentSeg) mergedSegments.push(currentSeg);
+            }
+        } catch (hfErr) {
+            console.error("HF Diarization API failed (Likely due to silence or HF overload):", hfErr.message);
         }
-        const segments = diarizeRes.data.segments;
-        
-        // 2. Assemble Audio
-        console.log("2. Sending to Audio Assembler...");
-        const assemblerUrl = process.env.AUDIO_ASSEMBLER_URL || "http://127.0.0.1:6000";
-        const assembleForm = new FormData();
-        assembleForm.append('raw_audio', fs.createReadStream(audioFile.tempFilePath), {
-            filename: (audioFile.name || 'audio.mp3').replace('.webm', '.ogg'),
-            contentType: (audioFile.name && audioFile.name.endsWith('.webm')) ? 'audio/ogg' : (audioFile.mimetype || 'audio/mpeg')
-        });
-        assembleForm.append('segments', JSON.stringify({ segments }));
-        
-        const assembleRes = await axios.post(`${assemblerUrl}/assemble`, assembleForm, {
-            headers: assembleForm.getHeaders(),
-            responseType: 'arraybuffer',
-            maxBodyLength: Infinity
-        });
-        
-        const assembledPath = path.join(__dirname, `../temp_assembled_${Date.now()}.mp3`);
-        fs.writeFileSync(assembledPath, assembleRes.data);
-        
-        // 3. Transcribe with Groq
-        console.log("3. Transcribing with Groq...");
+
+        let transcript = "";
         const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-        const transcriptRes = await groq.audio.transcriptions.create({
-            file: fs.createReadStream(assembledPath),
-            model: "whisper-large-v3-turbo",
-            response_format: "json"
-        });
-        
-        const transcript = transcriptRes.text;
-        
-        // Cleanup assembled file
-        try { fs.unlinkSync(assembledPath); } catch (e) { console.error("Could not delete temp assembled file", e); }
+
+        if (mergedSegments.length > 0) {
+            // 2. Assemble Audio
+            console.log("2. Sending to Audio Assembler...");
+            const assemblerUrl = process.env.AUDIO_ASSEMBLER_URL || "http://127.0.0.1:6000";
+            const assembleForm = new FormData();
+            assembleForm.append('raw_audio', fs.createReadStream(activeProcessPath), {
+                filename: activeFilename,
+                contentType: activeMimeType
+            });
+            assembleForm.append('segments', JSON.stringify({ segments: mergedSegments }));
+            
+            const assembleRes = await axios.post(`${assemblerUrl}/assemble`, assembleForm, {
+                headers: assembleForm.getHeaders(),
+                responseType: 'arraybuffer',
+                maxBodyLength: Infinity
+            });
+            
+            const assembledPath = path.join(__dirname, `../temp_assembled_${Date.now()}.mp3`);
+            fs.writeFileSync(assembledPath, assembleRes.data);
+            
+            // 3. Transcribe with Groq
+            console.log("3. Transcribing with Groq (Assembled)...");
+            try {
+                const transcriptRes = await groq.audio.transcriptions.create({
+                    file: fs.createReadStream(assembledPath),
+                    model: "whisper-large-v3-turbo",
+                    response_format: "json"
+                });
+                transcript = transcriptRes.text;
+            } catch (tErr) {
+                console.error("Groq Transcription Exception (Assembled - Likely Silent):", tErr.message);
+                transcript = "";
+            }
+            
+            try { fs.unlinkSync(assembledPath); } catch (e) { console.error("Could not delete temp assembled file", e); }
+        } else {
+            console.log("2/3. Fallback: Transcribing raw continuous block audio via Groq directly...");
+            
+            // Groq SDK strict inference fails natively on extension-less temp files
+            // Dynamically clone temporary payload locally strictly bound to container suffix
+            const fileExt = (activeFilename && activeFilename.match(/\.(webm|mp4|mp3|wav|ogg|m4a|flac)$/)) 
+                ? activeFilename.substring(activeFilename.lastIndexOf('.')) 
+                : '.webm';
+            const fallbackPath = path.join(__dirname, `../temp_fallback_${Date.now()}${fileExt}`);
+            fs.copyFileSync(activeProcessPath, fallbackPath);
+
+            try {
+                const transcriptRes = await groq.audio.transcriptions.create({
+                    file: fs.createReadStream(fallbackPath),
+                    model: "whisper-large-v3-turbo",
+                    response_format: "json"
+                });
+                transcript = transcriptRes.text;
+            } catch (tErr) {
+                console.error("Groq Fallback Exception (Raw - Likely pure silence):", tErr.message);
+                transcript = "";
+            }
+            try { fs.unlinkSync(fallbackPath); } catch(e) {}
+        }
+
         try { fs.unlinkSync(audioFile.tempFilePath); } catch (e) { } // clear original temp upload
+        if (activeProcessPath === normalizedWavPath) {
+            try { fs.unlinkSync(normalizedWavPath); } catch (e) { } // clear FFmpeg layer
+        }
         
         // 4. Extract Insights & Schedules
         console.log("4. Extracting insights and schedules...");
