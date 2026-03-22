@@ -1,6 +1,4 @@
-﻿# Brain.2
- <div>
-  <img src="https://res.cloudinary.com/dfjuuwtr6/image/upload/v1773415113/73e1a4754baea4b4a6624dc31c62fc22_ltm77b.jpg" alt="Second Brain Logo" width="100%" height="450px" />
+ <div align="center">
 
   # Brain.2
   
@@ -9,6 +7,8 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Node.js Version](https://img.shields.io/badge/Node.js-18.x-green.svg)](https://nodejs.org/)
   [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+  
+  <img src="https://res.cloudinary.com/dfjuuwtr6/image/upload/v1774162392/Screenshot_2026-03-22_115159_qftixx.png" alt="Second Brain Logo" width="100%" height="450px" />
 
   *Elevate your productivity, manage knowledge, and interact with an intelligent ecosystem designed to be the ultimate extension of your mind.*
 </div>
